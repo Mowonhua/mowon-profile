@@ -1,0 +1,12 @@
+# 本地草稿区，不同步
+.scratch/
+
+# CodeGraph 本机索引缓存，按主机生成
+.codegraph/
+
+# 编辑器与操作系统文件
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
