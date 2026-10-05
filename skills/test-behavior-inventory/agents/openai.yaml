@@ -1,0 +1,7 @@
+interface:
+  display_name: "测试行为盘点与清理"
+  short_description: "盘点测试固化的行为，建立行为清单与测试处置表，经用户确认后清理冗余测试"
+  default_prompt: "使用 $test-behavior-inventory 对当前项目做一次测试行为盘点与冗余测试清理。"
+
+policy:
+  allow_implicit_invocation: true
