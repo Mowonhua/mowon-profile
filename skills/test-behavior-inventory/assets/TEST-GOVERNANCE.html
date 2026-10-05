@@ -252,31 +252,31 @@ html[data-density=comfortable] .ctext.end .ctext-in{-webkit-mask-image:none;mask
 .pill[data-p="L1"]{--pc:var(--p-teal);font-weight:600}
 .pill[data-p="L2"]{--pc:var(--p-blue)}
 .pill[data-p="L3"]{--pc:var(--p-slate)}
-.pill[data-p="Critical"]{--pc:var(--p-red);font-weight:600}
-.pill[data-p="High"]{--pc:var(--p-orange)}
-.pill[data-p="Medium"]{--pc:var(--p-amber)}
-.pill[data-p="Low"]{--pc:var(--p-slate)}
-.pill[data-p="Stable"]{--pc:var(--p-green)}
-.pill[data-p="Mutable"]{--pc:var(--p-amber)}
-.pill[data-p="Accidental"]{--pc:var(--p-brown)}
-.pill[data-p="Valid"]{--pc:var(--p-green)}
-.pill[data-p="Unclear"]{--pc:var(--p-amber)}
-.pill[data-p="Obsolete"]{--pc:var(--p-red)}
+.pill[data-p="关键"]{--pc:var(--p-red);font-weight:600}
+.pill[data-p="高"]{--pc:var(--p-orange)}
+.pill[data-p="中"]{--pc:var(--p-amber)}
+.pill[data-p="低"]{--pc:var(--p-slate)}
+.pill[data-p="稳定"]{--pc:var(--p-green)}
+.pill[data-p="可变"]{--pc:var(--p-amber)}
+.pill[data-p="偶然"]{--pc:var(--p-brown)}
+.pill[data-p="有效"]{--pc:var(--p-green)}
+.pill[data-p="存疑"]{--pc:var(--p-amber)}
+.pill[data-p="过时"]{--pc:var(--p-red)}
 .pill[data-p="保留"]{--pc:var(--p-green)}
 .pill[data-p="合并"]{--pc:var(--p-blue)}
 .pill[data-p="重写"]{--pc:var(--p-violet)}
 .pill[data-p="删除"]{--pc:var(--p-red)}
 .pill[data-p="待确认"]{--pc:var(--p-amber);font-weight:600}
-.pill[data-p="Active"]{--pc:var(--p-green)}
-.pill[data-p="Superseded"]{--pc:var(--p-indigo)}
-.pill[data-p="Removed"]{--pc:var(--p-red)}
-.pill[data-p="Behavior"]{--pc:var(--p-teal)}
-.pill[data-p="Contract"]{--pc:var(--p-blue)}
-.pill[data-p="Integration"]{--pc:var(--p-violet)}
-.pill[data-p="Unit"]{--pc:var(--p-indigo)}
-.pill[data-p="Implementation"]{--pc:var(--p-brown)}
-.pill[data-p="Regression"]{--pc:var(--p-magenta)}
-.pill[data-p="Other"]{--pc:var(--p-slate)}
+.pill[data-p="生效中"]{--pc:var(--p-green)}
+.pill[data-p="已取代"]{--pc:var(--p-indigo)}
+.pill[data-p="已删除"]{--pc:var(--p-red)}
+.pill[data-p="行为"]{--pc:var(--p-teal)}
+.pill[data-p="契约"]{--pc:var(--p-blue)}
+.pill[data-p="集成"]{--pc:var(--p-violet)}
+.pill[data-p="单元"]{--pc:var(--p-indigo)}
+.pill[data-p="实现"]{--pc:var(--p-brown)}
+.pill[data-p="回归"]{--pc:var(--p-magenta)}
+.pill[data-p="其他"]{--pc:var(--p-slate)}
 .more{display:block;width:100%;margin-top:var(--sp-4);background:transparent;border:1px dashed var(--rule-strong);
   color:var(--ink-2);padding:var(--sp-3);font:inherit;font-size:var(--step--1);cursor:pointer;
   border-radius:var(--r-md);transition:var(--dur) var(--ease)}
@@ -559,9 +559,9 @@ function moduleStats(){
 }
 function renderOverview(){
   const B = data.behaviors, T = data.tests;
-  const active = T.filter(t => t.status !== 'Removed');
-  const valid = B.filter(b => b.status === 'Valid');
-  const uncovered = valid.filter(b => !(data.testsOf[b.id] || []).some(t => t.status !== 'Removed'));
+  const active = T.filter(t => t.status !== '已删除');
+  const valid = B.filter(b => b.status === '有效');
+  const uncovered = valid.filter(b => !(data.testsOf[b.id] || []).some(t => t.status !== '已删除'));
   const cov = valid.length ? Math.round((valid.length - uncovered.length) / valid.length * 100) : null;
   const nMerge = T.filter(r => r.disposition === '合并').length;
   const nRewrite = T.filter(r => r.disposition === '重写').length;
@@ -569,8 +569,8 @@ function renderOverview(){
   const rows = moduleStats();
   document.getElementById('overview').innerHTML = `
     <div class="ledger">
-      <div><b>${B.length}</b><span>行为契约</span><i>${valid.length} Valid</i></div>
-      <div><b>${T.length}</b><span>测试记录</span><i>${active.length} Active</i></div>
+      <div><b>${B.length}</b><span>行为契约</span><i>${valid.length} 有效</i></div>
+      <div><b>${T.length}</b><span>测试记录</span><i>${active.length} 生效中</i></div>
       <div><b>${new Set(T.map(r => r.file)).size}</b><span>测试文件</span></div>
       <div><b>${cov === null ? '—' : cov + '%'}</b><span>行为覆盖率</span>${uncovered.length ? `<i class="risk">未覆盖 ${uncovered.length}</i>` : '<i>全部覆盖</i>'}</div>
       <div><b>${nMerge}<em> +${nRewrite}</em></b><span>合并 / 重写</span></div>
@@ -579,9 +579,9 @@ function renderOverview(){
     </div>
     <div class="cols">
       ${dist('行为层级', count(B, 'level'), ['L1', 'L2', 'L3'])}
-      ${dist('重要性', count(B, 'importance'), ['Critical', 'High', 'Medium', 'Low'])}
-      ${dist('稳定性', count(B, 'stability'), ['Stable', 'Mutable', 'Accidental'])}
-      ${dist('行为状态', count(B, 'status'), ['Valid', 'Unclear', 'Obsolete'])}
+      ${dist('重要性', count(B, 'importance'), ['关键', '高', '中', '低'])}
+      ${dist('稳定性', count(B, 'stability'), ['稳定', '可变', '偶然'])}
+      ${dist('行为状态', count(B, 'status'), ['有效', '存疑', '过时'])}
       ${dist('测试处置', count(T, 'disposition'), ['保留', '合并', '重写', '删除', '待确认'])}
       ${dist('测试类型', count(T, 'type'))}
     </div>
@@ -626,9 +626,9 @@ function buildFilters(kind){
     html += `<select data-k="module"><option value="__all">全部模块</option>${uniq(data.behaviors.map(r => r.module).filter(Boolean))
       .map(m => `<option value="${esc(m)}" ${cfg.module === m ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select>`;
     html += chipRow(cfg.layer, 'layer', 'level', ['L1', 'L2', 'L3'], data.behaviors);
-    html += chipRow(cfg.imp, 'imp', 'importance', ['Critical', 'High', 'Medium', 'Low'], data.behaviors);
-    html += chipRow(cfg.stab, 'stab', 'stability', ['Stable', 'Mutable', 'Accidental'], data.behaviors);
-    html += chipRow(cfg.st, 'st', 'status', ['Valid', 'Unclear', 'Obsolete'], data.behaviors);
+    html += chipRow(cfg.imp, 'imp', 'importance', ['关键', '高', '中', '低'], data.behaviors);
+    html += chipRow(cfg.stab, 'stab', 'stability', ['稳定', '可变', '偶然'], data.behaviors);
+    html += chipRow(cfg.st, 'st', 'status', ['有效', '存疑', '过时'], data.behaviors);
     html += `<span class="chip ${cfg.dup ? 'on' : ''}" data-dup="1">仅有重复关系</span>`;
   } else {
     html += `<select data-k="file"><option value="__all">全部文件</option>${uniq(data.tests.map(r => r.file).filter(Boolean))
@@ -770,21 +770,21 @@ function behDetail(id){
     ? members.map(d => { const x = data.byId[d];
         return `<span class="jump" data-jump="${d}">${d}${x ? ' · ' + esc(x.behavior.slice(0, 20)) + '…' : ''}</span>`; }).join(' ')
     : '无';
-  const effective = ts.filter(t => t.status !== 'Removed');
+  const effective = ts.filter(t => t.status !== '已删除');
   const list = ts.length
     ? `<div class="tlist">` + ts.map(t =>
         `<a data-jump="${t.id}"><span class="cid">${t.id}</span><span>${pill(t.disposition)}</span><span class="tn">${esc(t.name)}</span></a>`).join('') + `</div>`
     : `<div class="card-l gap">没有任何测试引用这条行为 —— 覆盖缺口，需要补测试或把它标为废弃。</div>`;
   const gap = ts.length && !effective.length
     ? `<div class="card-l gap" style="margin-top:var(--sp-2)">引用它的测试均已删除或废弃 —— 覆盖缺口。</div>` : '';
-  return `<div class="detail"><div class="detail-in"><h4>依据</h4><div class="card-l${r.status === 'Unclear' ? ' crit' : ''}">${esc(r.basis) || '—'}</div>
+  return `<div class="detail"><div class="detail-in"><h4>依据</h4><div class="card-l${r.status === '存疑' ? ' crit' : ''}">${esc(r.basis) || '—'}</div>
     <h4>固化该行为的测试 <i>${ts.length}</i></h4>${list}${gap}
     <h4>重复关系</h4><div class="chips">${dupHtml}</div>
     <div class="meta"><span><i>层级</i>${pill(r.level)}</span><span><i>稳定性</i>${pill(r.stability)}</span><span><i>状态</i>${pill(r.status)}</span></div></div></div>`;
 }
 function testRow(r, i = 0){
   const beh = r.bids.length ? r.bids.map(b => `<span class="jump" data-jump="${b}">${b}</span>`).join(' ') : '—';
-  return `<article class="row stagger${r.status === 'Removed' ? ' dimmed' : ''}" data-id="${r.id}"
+  return `<article class="row stagger${r.status === '已删除' ? ' dimmed' : ''}" data-id="${r.id}"
     data-open="${expanded.has(r.id) ? 1 : 0}" tabindex="0" role="button" aria-expanded="${expanded.has(r.id)}"
     style="animation-delay:${Math.min(i, 40) * 8}ms">
     <div class="rw"><span class="cid">${esc(r.id)}</span><span class="cname">${esc(r.name)}</span>
@@ -843,8 +843,8 @@ function renderPending(){
     <div class="ledger">
       <div><b>${rows.length}</b><span>待确认测试</span></div>
       <div><b>${Object.keys(groups).length}</b><span>涉及模块</span></div>
-      <div><b>${data.behaviors.filter(b => b.status === 'Unclear').length}</b><span>状态 Unclear 的行为</span></div>
-      <div><b>${data.behaviors.filter(b => b.status === 'Obsolete').length}</b><span>状态 Obsolete 的行为</span></div>
+      <div><b>${data.behaviors.filter(b => b.status === '存疑').length}</b><span>状态存疑的行为</span></div>
+      <div><b>${data.behaviors.filter(b => b.status === '过时').length}</b><span>状态过时的行为</span></div>
     </div>
     ${Object.entries(groups).map(([m, list]) => `<div class="block" style="margin-bottom:var(--sp-6)">
       <h3>${esc(m)} · ${list.length} 项</h3>
