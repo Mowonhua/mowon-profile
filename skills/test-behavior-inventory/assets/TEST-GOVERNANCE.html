@@ -241,9 +241,6 @@ html[data-density=comfortable] .ctext.cut .ctext-in,
 html[data-density=comfortable] .ctext.end .ctext-in{-webkit-mask-image:none;mask-image:none}
 .cname{font-family:var(--font-mono);font-size:var(--step--1);word-break:break-all;line-height:1.45}
 .cfile{color:var(--ink-3);font-size:var(--step--2);word-break:break-all;font-family:var(--font-mono);line-height:1.45}
-.cflag{display:inline-block;margin-left:.5rem;padding:0 6px;border-radius:var(--r-sm);
-  font-family:var(--font-mono);font-size:var(--step--2);background:var(--accent-soft);color:var(--accent);
-  vertical-align:.08em}
 .pill{display:inline-block;padding:1px 7px;border-radius:var(--r-sm);font-size:var(--step--2);
   border:1px solid var(--rule-strong);color:var(--ink-2);white-space:nowrap;background:var(--surface);
   --pc:var(--ink-2);font-weight:500}
@@ -328,7 +325,7 @@ html[data-density=comfortable] .ctext.end .ctext-in{-webkit-mask-image:none;mask
 .meta span{display:inline-flex;gap:6px;align-items:baseline;max-width:100%}
 .meta i{font-style:normal;color:var(--ink-3);white-space:nowrap}
 
-/* ------------------------------------------------------------------ 重复簇 */
+/* ------------------------------------------------------------------ 重复候选 */
 .cluster{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);
   padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-3);transition:var(--dur) var(--ease)}
 .cluster:hover{border-color:var(--rule-strong);box-shadow:var(--shadow)}
@@ -431,7 +428,7 @@ function parseTable(text){
   return tables;
 }
 
-/* 由两份表的行数组构建视图模型：映射、重复簇（并查集）、关联索引。
+/* 由两份表的行数组构建视图模型：映射、重复候选、关联索引。
    实时模式从 MD 解析后调用，快照模式直接以内嵌数据调用。 */
 function derive(behaviors, tests){
   const bh = behaviors.filter(b => b.id);
@@ -441,26 +438,20 @@ function derive(behaviors, tests){
   const testsOf = {};
   for (const t of th) for (const b of t.bids) (testsOf[b] ||= []).push(t);
 
-  const parent = new Map(bh.map(b => [b.id, b.id]));
-  const find = x => { while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x))); x = parent.get(x); } return x; };
-  bh.forEach(b => b.dupIds.forEach(ref => {
-    if (parent.has(ref) && ref !== b.id) parent.set(find(b.id), find(ref));
-  }));
+  // 重复候选：同一行为下存在多个未删除测试。已删除的测试不再属于套件，不计入
   const order = new Map(bh.map((b, i) => [b.id, i]));
-  const groups = new Map();
-  bh.forEach(b => { const root = find(b.id); if (!groups.has(root)) groups.set(root, []); groups.get(root).push(b.id); });
-  const clusters = [...groups.values()].filter(m => m.length > 1)
-    .sort((a, z) => Math.min(...a.map(id => order.get(id))) - Math.min(...z.map(id => order.get(id))));
-  const clusterOf = new Map();
-  clusters.forEach((members, i) => members.forEach(id => clusterOf.set(id, i + 1)));
-  return { behaviors: bh, tests: th, byId, testById, testsOf, clusterOf, clusters };
+  const clusters = Object.entries(testsOf)
+    .map(([bid, ts]) => ({ bid, tests: ts.filter(t => t.status !== '已删除') }))
+    .filter(g => g.tests.length > 1)
+    .sort((a, z) => (order.get(a.bid) ?? Infinity) - (order.get(z.bid) ?? Infinity));
+  const dupSet = new Set(clusters.map(g => g.bid));
+  return { behaviors: bh, tests: th, byId, testById, testsOf, dupSet, clusters };
 }
 function deriveFromRaw(rawTexts){
   const behaviors = parseTable(rawTexts.behaviors).map(r => ({
     id: (r['ID'] || '').trim(), module: r['模块'] || '', behavior: r['行为'] || '',
     level: r['层级'] || '', basis: r['依据'] || '', importance: r['重要性'] || '',
-    stability: r['稳定性'] || '', dup: r['重复关系'] || '',
-    dupIds: (r['重复关系'] || '').match(/B-\d+/g) || [], status: r['状态'] || '',
+    stability: r['稳定性'] || '', status: r['状态'] || '',
   })).filter(r => /^B-\d+/.test(r.id)); // 合并多表时挡掉无关表格的行
   const tests = parseTable(rawTexts.tests).map(r => ({
     id: (r['ID'] || '').trim(), name: r['测试'] || '', file: r['文件'] || '',
@@ -473,7 +464,7 @@ function deriveFromRaw(rawTexts){
 
 /* ---------- 全局状态 ---------- */
 
-let data = { behaviors: [], tests: [], byId: {}, testById: {}, testsOf: {}, clusterOf: new Map(), clusters: [] };
+let data = { behaviors: [], tests: [], byId: {}, testById: {}, testsOf: {}, dupSet: new Set(), clusters: [] };
 let snapshotMode = false;
 let lastSig = null;
 let view = 'overview';
@@ -516,7 +507,7 @@ const VIEWS = () => [
   ['beh', '行为', data.behaviors.length],
   ['test', '测试', data.tests.length],
   ['pending', '待确认', data.tests.filter(r => r.disposition === '待确认').length],
-  ['dupes', '重复簇', data.clusters.length],
+  ['dupes', '重复候选', data.clusters.length],
 ];
 function renderNav(){
   const nav = document.getElementById('nav');
@@ -575,7 +566,7 @@ function renderOverview(){
       <div><b>${cov === null ? '—' : cov + '%'}</b><span>行为覆盖率</span>${uncovered.length ? `<i class="risk">未覆盖 ${uncovered.length}</i>` : '<i>全部覆盖</i>'}</div>
       <div><b>${nMerge}<em> +${nRewrite}</em></b><span>合并 / 重写</span></div>
       <div><b class="${nPend ? 'risk' : ''}">${nPend}</b><span>待确认</span></div>
-      <div><b>${data.clusters.length}</b><span>重复簇</span><i>涉及 ${data.clusters.reduce((s, c) => s + c.length, 0)} 行为</i></div>
+      <div><b>${data.clusters.length}</b><span>重复候选</span><i>涉及 ${data.clusters.reduce((s, c) => s + c.tests.length, 0)} 测试</i></div>
     </div>
     <div class="cols">
       ${dist('行为层级', count(B, 'level'), ['L1', 'L2', 'L3'])}
@@ -629,7 +620,7 @@ function buildFilters(kind){
     html += chipRow(cfg.imp, 'imp', 'importance', ['关键', '高', '中', '低'], data.behaviors);
     html += chipRow(cfg.stab, 'stab', 'stability', ['稳定', '可变', '偶然'], data.behaviors);
     html += chipRow(cfg.st, 'st', 'status', ['有效', '存疑', '过时'], data.behaviors);
-    html += `<span class="chip ${cfg.dup ? 'on' : ''}" data-dup="1">仅有重复关系</span>`;
+    html += `<span class="chip ${cfg.dup ? 'on' : ''}" data-dup="1">存在重复候选</span>`;
   } else {
     html += `<select data-k="file"><option value="__all">全部文件</option>${uniq(data.tests.map(r => r.file).filter(Boolean))
       .map(f => `<option value="${esc(f)}" ${cfg.file === f ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select>`;
@@ -661,7 +652,7 @@ const behMatch = r => { const c = FILTER.beh;
   return (c.module === '__all' || r.module === c.module)
     && (!c.layer.size || c.layer.has(r.level)) && (!c.imp.size || c.imp.has(r.importance))
     && (!c.stab.size || c.stab.has(r.stability)) && (!c.st.size || c.st.has(r.status))
-    && (!c.dup || r.dupIds.length)
+    && (!c.dup || data.dupSet.has(r.id))
     && (!c.q || (r.behavior + ' ' + r.basis + ' ' + r.module + ' ' + r.id).toLowerCase().includes(c.q)); };
 const testMatch = r => { const c = FILTER.test;
   return (c.file === '__all' || r.file === c.file)
@@ -751,12 +742,11 @@ function toggle(id, row){
 function behRow(r, i = 0){
   const ts = data.testsOf[r.id] || [];
   const beh = ts.length ? ts.map(t => `<span class="jump" data-jump="${t.id}">${t.id}</span>`).join(' ') : '—';
-  const c = data.clusterOf.get(r.id);
   return `<article class="row stagger" data-id="${r.id}" data-open="${expanded.has(r.id) ? 1 : 0}"
     tabindex="0" role="button" aria-expanded="${expanded.has(r.id)}" style="animation-delay:${Math.min(i, 40) * 8}ms">
     <div class="rw">
       <span class="cid">${esc(r.id)}</span><span>${pill(r.level)}</span><span class="cmod">${esc(r.module)}</span>
-      <span class="ctext"><span class="ctext-in">${esc(r.behavior)}${c ? `<span class="cflag">簇${c}</span>` : ''}</span><button class="slide prev" type="button" hidden aria-label="向左滚动"><svg viewBox="0 0 8 12" fill="none" aria-hidden="true"><path d="M6.5 1 1.5 6 6.5 11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="slide next" type="button" hidden aria-label="向右滚动"><svg viewBox="0 0 8 12" fill="none" aria-hidden="true"><path d="M1.5 1 6.5 6 1.5 11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button></span>
+      <span class="ctext"><span class="ctext-in">${esc(r.behavior)}</span><button class="slide prev" type="button" hidden aria-label="向左滚动"><svg viewBox="0 0 8 12" fill="none" aria-hidden="true"><path d="M6.5 1 1.5 6 6.5 11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="slide next" type="button" hidden aria-label="向右滚动"><svg viewBox="0 0 8 12" fill="none" aria-hidden="true"><path d="M1.5 1 6.5 6 1.5 11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button></span>
       <span class="imp">${pill(r.importance)}</span><span class="stab">${pill(r.stability)}</span>
       <span class="st">${pill(r.status)}</span>
       <span class="fbeh">${beh}</span>
@@ -764,12 +754,6 @@ function behRow(r, i = 0){
 }
 function behDetail(id){
   const r = data.byId[id], ts = data.testsOf[id] || [];
-  const c = data.clusterOf.get(id);
-  const members = c ? data.clusters[c - 1].filter(m => m !== id) : [];
-  const dupHtml = members.length
-    ? members.map(d => { const x = data.byId[d];
-        return `<span class="jump" data-jump="${d}">${d}${x ? ' · ' + esc(x.behavior.slice(0, 20)) + '…' : ''}</span>`; }).join(' ')
-    : '无';
   const effective = ts.filter(t => t.status !== '已删除');
   const list = ts.length
     ? `<div class="tlist">` + ts.map(t =>
@@ -779,7 +763,6 @@ function behDetail(id){
     ? `<div class="card-l gap" style="margin-top:var(--sp-2)">引用它的测试均已删除或废弃 —— 覆盖缺口。</div>` : '';
   return `<div class="detail"><div class="detail-in"><h4>依据</h4><div class="card-l${r.status === '存疑' ? ' crit' : ''}">${esc(r.basis) || '—'}</div>
     <h4>固化该行为的测试 <i>${ts.length}</i></h4>${list}${gap}
-    <h4>重复关系</h4><div class="chips">${dupHtml}</div>
     <div class="meta"><span><i>层级</i>${pill(r.level)}</span><span><i>稳定性</i>${pill(r.stability)}</span><span><i>状态</i>${pill(r.status)}</span></div></div></div>`;
 }
 function testRow(r, i = 0){
@@ -855,17 +838,18 @@ function renderPending(){
   };
 }
 
-/* ---------- 重复簇 ---------- */
+/* ---------- 重复候选 ---------- */
 
 function renderDupes(){
   document.getElementById('dupes').innerHTML = `
-    <h2>重复行为簇</h2>
-    ${data.clusters.map((g, i) => {
-      const tests = [...new Set(g.flatMap(b => (data.testsOf[b] || []).map(t => t.id)))];
-      return `<div class="cluster"><div class="hd"><span>簇 <b>${i + 1}</b></span><span>${g.length} 条行为</span><span>${tests.length} 个测试</span></div>
-        <div class="tlist">${g.map(b => { const r = data.byId[b];
-          return `<a data-jump="${b}"><span class="cid">${b}</span><span>${pill(r.level)}</span><span class="tb">${esc(r.behavior)}</span></a>`; }).join('')}</div></div>`;
-    }).join('')}`;
+    <h2>重复候选组</h2>
+    ${data.clusters.map((g, i) => { const b = data.byId[g.bid];
+      return `<div class="cluster"><div class="hd"><span>组 <b>${i + 1}</b></span><span>${g.tests.length} 个测试</span></div>
+        <div class="tlist">
+          <a data-jump="${g.bid}"><span class="cid">${esc(g.bid)}</span><span>${b ? pill(b.level) : ''}</span><span class="tb">${esc(b ? b.behavior : '（未知行为）')}</span></a>
+          ${g.tests.map(t => `<a data-jump="${t.id}"><span class="cid">${t.id}</span><span>${pill(t.disposition)}</span><span class="tn">${esc(t.name)}</span></a>`).join('')}
+        </div></div>`;
+    }).join('') || '<div class="empty"><strong>没有重复候选</strong>没有行为同时被多个未删除测试固化。</div>'}`;
   document.getElementById('dupes').onclick = e => { const l = e.target.closest('[data-jump]'); if (l) jumpTo(l.dataset.jump); };
 }
 
