@@ -2,7 +2,8 @@
 # 一键安装本仓库的 AI 配置：全局提示词、本仓库 skills、云端 skills 清单。
 # 幂等：已就绪的项原样跳过，只补齐缺失项、修正指向错误的链接，可重复执行。
 #
-# 用法：克隆本仓库后执行 ./install.sh
+# 用法：克隆本仓库后执行 ./install.sh（macOS / Linux 原生支持，Windows 在 Git Bash / MSYS2
+#       中执行；Windows 原生环境可改用行为一致的 install.ps1）。
 #   AGENTS_HOME=... ./install.sh   覆盖 skills 统一目录（默认 ~/.agents，skills CLI 约定）
 #   SKILLS_AGENTS=... ./install.sh 覆盖云端 skill 分发的目标 agent；默认 codex——
 #   skills CLI 对 codex 等 universal agent 只写入统一目录，不改动各 harness 目录，
@@ -11,10 +12,25 @@
 # 按 skill 配置各模型可见性的分发暂未实现。
 set -u
 
-# 从 cmd/powershell 等环境调用时 HOME 可能缺失或为 Windows 形式，先归一化
-if [ -z "${HOME:-}" ] && [ -n "${USERPROFILE:-}" ]; then HOME="$USERPROFILE"; fi
-if command -v cygpath >/dev/null 2>&1 && [[ "${HOME:-}" =~ ^[A-Za-z]:[\\/] ]]; then
-  HOME="$(cygpath -u "$HOME")"
+# 用 sh/dash/zsh 等调用时缺少本脚本依赖的 bash 特性（数组、进程替换），转交 bash 重新执行
+if [ -z "${BASH_VERSION:-}" ]; then
+  exec bash "$0" "$@"
+fi
+
+# 检测宿主 OS；windows 指 MSYS/Cygwin 等 POSIX 层，链接降级与路径归一化仅在该分支生效
+case "$(uname -s)" in
+  Darwin) OS=darwin ;;
+  Linux) OS=linux ;;
+  MINGW*|MSYS*|CYGWIN*|Windows*) OS=windows ;;
+  *) OS=unix ;;
+esac
+
+if [ "$OS" = windows ]; then
+  # 从 cmd/powershell 等环境调用时 HOME 可能缺失或为 Windows 形式，先归一化
+  if [ -z "${HOME:-}" ] && [ -n "${USERPROFILE:-}" ]; then HOME="$USERPROFILE"; fi
+  if command -v cygpath >/dev/null 2>&1 && [[ "${HOME:-}" =~ ^[A-Za-z]:[\\/] ]]; then
+    HOME="$(cygpath -u "$HOME")"
+  fi
 fi
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -39,6 +55,20 @@ FAILED=0
 log()  { printf '%s\n' "$*"; }
 warn() { FAILED=1; printf '  ! %s\n' "$*" >&2; }
 ok()   { printf '  %s\n' "$*"; }
+
+# 探测当前环境能否创建软链接。Cygwin 默认会用“复制”冒充 ln -s，MSYS 亦然，
+# 必须显式 nativestrict 才能得到真实链接或失败；非 Windows 上这些变量无效果、恒成功。
+# Windows 无特权（未开开发者模式）时返回 1，此时文件链接不可用，
+# 内容一致的旧拷贝保持原样，避免每次运行都删除重拷。
+can_symlink() {
+  local d rc
+  d="$(mktemp -d)" && : >"$d/probe-target" || return 1
+  MSYS=winsymlinks:nativestrict CYGWIN=winsymlinks:nativestrict \
+    ln -s "$d/probe-target" "$d/probe-link" 2>/dev/null
+  rc=$?
+  rm -rf "$d"
+  return "$rc"
+}
 
 # 输出链接指向的绝对路径；不是链接、指向无效或无法解析时返回 1。
 # 兼容 MSYS 软链接与 Windows junction（后者 readlink 可能给出 Windows 形式的路径）。
@@ -80,40 +110,45 @@ link_points_to() {
 # 目录 junction，仍失败则退化为复制并告警——保证安装流程不中断
 make_link() {
   local source="$1" target="$2"
-  if MSYS=winsymlinks:nativestrict ln -s "$source" "$target" 2>/dev/null; then return 0; fi
-  if [ -d "$source" ] && command -v cmd.exe >/dev/null 2>&1 && command -v cygpath >/dev/null 2>&1; then
+  if MSYS=winsymlinks:nativestrict CYGWIN=winsymlinks:nativestrict ln -s "$source" "$target" 2>/dev/null; then return 0; fi
+  if [ "$OS" = windows ] && [ -d "$source" ] \
+     && command -v cmd.exe >/dev/null 2>&1 && command -v cygpath >/dev/null 2>&1; then
     if cmd.exe //c mklink //J "$(cygpath -w "$target")" "$(cygpath -w "$source")" >/dev/null 2>&1; then return 0; fi
   fi
   cp -R "$source" "$target"
-  warn "$target 无法创建软链接，已退化为复制；仓库更新后需重跑本脚本同步"
+  warn "$target could not be created as a symbolic link; copied instead -- re-run this script to sync after repo updates"
 }
 
 install_prompts() {
-  log "== 全局提示词 =="
-  local entry src dest
+  log "== Global prompts =="
+  local entry src dest backup
   for entry in "${GLOBAL_PROMPTS[@]}"; do
     src="$REPO_DIR/${entry%%|*}"
     dest="$HOME/${entry#*|}"
     if [ ! -e "$src" ]; then
-      warn "源文件不存在：$src"
+      warn "source file not found: $src"
       continue
     fi
     if link_points_to "$dest" "$src"; then
-      ok "= $dest 已就绪"
+      ok "= $dest already in place"
       continue
     fi
     if [ -L "$dest" ]; then
-      rm "$dest" && make_link "$src" "$dest" && ok "~ $dest 链接指向已修正"
+      rm "$dest" && make_link "$src" "$dest" && ok "~ $dest link retargeted"
       continue
     fi
     if [ -e "$dest" ]; then
       if cmp -s "$src" "$dest"; then
-        rm "$dest" && make_link "$src" "$dest" && ok "~ $dest 拷贝已替换为软链接"
+        if [ "$CAN_SYMLINK" -eq 1 ]; then
+          rm "$dest" && make_link "$src" "$dest" && ok "~ $dest copy replaced with link"
+        else
+          ok "= $dest up to date (copy)"
+        fi
       else
         # 各 harness 的全局指令以仓库为单一事实源；旧文件内容可能仍有价值，原位备份后替换
         backup="$dest.bak-$(date +%Y%m%d-%H%M%S)"
         mv "$dest" "$backup" && make_link "$src" "$dest" \
-          && warn "$dest 与仓库内容不同，原文件已备份为 $backup 并替换为软链接；确认无需合并后可删除备份"
+          && warn "$dest differs from repo content; original backed up to $backup and replaced with a link; delete the backup if nothing needs merging"
       fi
       continue
     fi
@@ -122,9 +157,9 @@ install_prompts() {
 }
 
 install_local_skills() {
-  log "== 本地 skills（软链接到仓库）=="
+  log "== Local skills (linked to the repo) =="
   if [ ! -d "$REPO_DIR/skills" ]; then
-    warn "缺少 skills 目录"
+    warn "missing skills directory"
     return
   fi
   mkdir -p "$AGENTS_HOME/skills"
@@ -135,18 +170,18 @@ install_local_skills() {
     src="$REPO_DIR/skills/$name"
     target="$AGENTS_HOME/skills/$name"
     if link_points_to "$target" "$src"; then
-      ok "= $name 已就绪"
+      ok "= $name already in place"
       continue
     fi
     if [ -L "$target" ]; then
-      rm "$target" && make_link "$src" "$target" && ok "~ $name 链接指向已修正"
+      rm "$target" && make_link "$src" "$target" && ok "~ $name link retargeted"
       continue
     fi
     if [ -e "$target" ]; then
       if diff -r "$src" "$target" >/dev/null 2>&1; then
-        rm -rf "$target" && make_link "$src" "$target" && ok "~ $name 拷贝已替换为软链接"
+        rm -rf "$target" && make_link "$src" "$target" && ok "~ $name copy replaced with link"
       else
-        warn "$name 在 $AGENTS_HOME/skills 下已有不同内容，跳过；如以仓库为准，请备份并删除该目录后重跑"
+        warn "$name already exists with different content under $AGENTS_HOME/skills; skipped -- back it up, remove it, and re-run to take the repo version"
       fi
       continue
     fi
@@ -173,14 +208,14 @@ cloud_lock_has() {
 
 install_cloud_skills() {
   if [ ! -f "$CLOUD_LIST" ]; then
-    warn "缺少云端清单 $CLOUD_LIST"
+    warn "cloud skill list not found: $CLOUD_LIST"
     return
   fi
   if ! command -v npx >/dev/null 2>&1; then
-    warn "未找到 npx（需安装 Node.js），跳过云端 skills"
+    warn "npx not found (Node.js required); skipping cloud skills"
     return
   fi
-  log "== 云端 skills =="
+  log "== Cloud skills =="
   local agent_args=()
   [ -n "$SKILLS_AGENTS" ] && agent_args=(-a "$SKILLS_AGENTS")
   local pairs
@@ -193,17 +228,17 @@ install_cloud_skills() {
     name="${name%$'\r'}"
     case "$source" in ''|'#'*) continue ;; esac
     if [ -z "$name" ]; then
-      warn "清单行缺少 skill 名：$source"
+      warn "list line missing skill name: $source"
       continue
     fi
     if cloud_lock_has "$name"; then
-      ok "= $name 已安装"
+      ok "= $name already installed"
       continue
     fi
     # 本地 skills 以软链接占据同名目录时，云端安装会覆盖仓库内容
     store_dir="$AGENTS_HOME/skills/$name"
     if [ -L "$store_dir" ]; then
-      warn "$name 与本地软链接 skill 同名冲突，跳过云端安装"
+      warn "$name conflicts with a local linked skill of the same name; skipped cloud install"
       continue
     fi
     printf '%s\t%s\n' "$source" "$name" >>"$pairs"
@@ -221,16 +256,16 @@ install_cloud_skills() {
       names="${names:+$names }$s"
     done
     if out="$(npx -y skills@latest add "$repo" -g ${skill_args[@]+"${skill_args[@]}"} -y ${agent_args[@]+"${agent_args[@]}"} </dev/null 2>&1)"; then
-      ok "+ $names（$repo）"
+      ok "+ $names ($repo)"
     else
       # 整组失败时无法定位具体是哪个 skill 出错，退化为逐个安装以隔离问题
-      warn "整组安装失败（$repo），逐个重试：$names"
+      warn "group install failed ($repo); retrying one by one: $names"
       for s in $(awk -F'\t' -v r="$repo" '$1==r{print $2}' "$pairs"); do
         if out="$(npx -y skills@latest add "$repo" -g -s "$s" -y ${agent_args[@]+"${agent_args[@]}"} </dev/null 2>&1)"; then
-          ok "+ $s（$repo）"
+          ok "+ $s ($repo)"
         else
-          warn "$s 安装失败（$repo）；可手动执行：npx skills@latest add $repo -g -s $s -y"
-          printf '%s\n' "$out" | tail -20 >&2
+          warn "install failed for $s ($repo); run manually: npx skills@latest add $repo -g -s $s -y"
+          printf '%s\n' "$out" | tail -n 20 >&2
         fi
       done
     fi
@@ -238,17 +273,20 @@ install_cloud_skills() {
   rm -f "$pairs"
 }
 
+CAN_SYMLINK=0; can_symlink && CAN_SYMLINK=1
+
 main() {
-  log "仓库：$REPO_DIR"
-  log "skills 目录：$AGENTS_HOME/skills"
+  log "OS: $OS"
+  log "Repo: $REPO_DIR"
+  log "Skills dir: $AGENTS_HOME/skills"
   install_prompts
   install_local_skills
   install_cloud_skills
   if [ "$FAILED" -ne 0 ]; then
-    log "完成，但存在需要人工处理的项（见上方 ! 行）。"
+    log "done, but some items need manual attention (see ! lines above)"
     exit 1
   fi
-  log "全部就绪。"
+  log "all set"
 }
 
 main "$@"

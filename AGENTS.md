@@ -4,7 +4,8 @@
 
 ## 目录结构
 
-- `install.sh` — 一键安装脚本：将全局提示词与本地 skills 软链接到用户级配置目录，按清单通过 skills CLI 安装云端 skills；幂等。
+- `install.sh` — 一键安装脚本（macOS / Linux / Git Bash）：将全局提示词与本地 skills 软链接到用户级配置目录，按清单通过 skills CLI 安装云端 skills；幂等。
+- `install.ps1` — Windows 原生安装脚本，行为与 `install.sh` 一致（PowerShell 5.1+；无符号链接权限时目录降级 junction、文件降级复制）。
 - `install/` — 安装配置，目前含云端 skills 清单 `skills-cloud.list`。
 - `system/` — 各 harness 全局指令的源文件，安装到各主机、各 harness 的全局配置位置。
 - `skills/<skill-name>/` — 每个 skill 一个目录，目录名与 `SKILL.md` frontmatter 的 `name` 一致（kebab-case）。

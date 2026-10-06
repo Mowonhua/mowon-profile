@@ -1,4 +1,4 @@
-# 云端 skills 清单：每行 `<owner/repo> <skill-name>`，由 install.sh 通过
+# 云端 skills 清单：每行 `<owner/repo> <skill-name>`，由 install.sh / install.ps1 通过
 # `npx skills@latest add <owner/repo> -g -s <skill-name>` 安装到 ~/.agents/skills。
 # skill-name 与安装后 ~/.agents/.skill-lock.json 中的键一致；以 # 开头的行为注释。
 Leonxlnx/taste-skill brandkit
