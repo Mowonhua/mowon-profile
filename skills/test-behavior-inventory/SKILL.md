@@ -87,7 +87,7 @@ description: 当用户要求盘点测试行为、审计测试覆盖、识别冗�
 
 ## 可视化视图
 
-首次建立两份表时，把本技能 `assets/TEST-GOVERNANCE.html` 同名复制到项目根目录（项目已有则复用）；Windows 主机同时复制 `assets/TEST-GOVERNANCE.bat`，日常查看双击该文件即可自动启动本地服务器并打开浏览器。视图从同目录的 `BEHAVIORS.md` 与 `TEST-DISPOSITION.md` 实时读取，之后维护两份表无需改动这两个文件。非 Windows 主机或需要自定义端口时，运行本技能 `scripts/view.py`（用法 `python view.py [项目根目录] [端口]`，自动打开浏览器）或任选静态服务器后访问 `/TEST-GOVERNANCE.html`。
+首次建立两份表时，把本技能 `assets/TEST-GOVERNANCE.html` 同名复制到项目根目录（项目已有则复用）；Windows 主机同时复制 `assets/TEST-GOVERNANCE.bat`，日常查看双击该文件即可自动启动本地服务器并打开浏览器。视图从同目录的 `BEHAVIORS.md` 与 `TEST-DISPOSITION.md` 实时读取，之后维护两份表无需改动这两个文件。视图还会尝试读取同目录的 `TEST-RUN.xml`（JUnit XML 格式的最近一次测试运行报告）。运行测试时按框架把报告写到该文件：pytest 加 `--junitxml=TEST-RUN.xml`，vitest 加 `--reporter=junit --outputFile=TEST-RUN.xml`，jest 使用 jest-junit reporter，go 使用 gotestsum 的 `--junitfile TEST-RUN.xml`。`TEST-RUN.xml` 是运行产物，首次建立两份表时把它加入项目 `.gitignore`。非 Windows 主机或需要自定义端口时，运行本技能 `scripts/view.py`（用法 `python view.py [项目根目录] [端口]`，自动打开浏览器）或任选静态服务器后访问 `/TEST-GOVERNANCE.html`。
 
 ## 交付与确认
 
@@ -99,7 +99,7 @@ description: 当用户要求盘点测试行为、审计测试覆盖、识别冗�
 
 修改完成后：
 
-1. 先运行本次改动涉及的测试，再运行完整测试套件，确认没有产生新的测试失败。
+1. 运行本次改动涉及的测试，再运行完整测试套件，确认没有产生新的测试失败。运行测试时输出 JUnit XML 报告到项目根目录的 `TEST-RUN.xml`（pytest 加 `--junitxml=TEST-RUN.xml`，其他框架的输出方式见可视化视图一节），供治理视图展示最近一次运行结果。
 2. 更新两份表，使其反映最终代码状态；被删除的测试和废弃的行为只更新状态，保留 ID 与处置原因。
 
 完成标准：测试套件通过且无新增失败；每个 `有效` 行为都有对应的保留测试；两份表与最终代码状态一致。

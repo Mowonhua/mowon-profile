@@ -7,7 +7,8 @@
 <title>测试治理视图</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%2317605a'/%3E%3Cpath d='M9 22 V14 M16 22 V9 M23 22 v-5' fill='none' stroke='%23f7faf9' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
 <!--
-  测试治理视图：从同目录的 BEHAVIORS.md 与 TEST-DISPOSITION.md 实时读取并渲染两份测试治理表。
+  测试治理视图：从同目录的 BEHAVIORS.md 与 TEST-DISPOSITION.md 实时读取并渲染两份测试治理表，
+  并在存在 TEST-RUN.xml（JUnit XML 测试报告）时合并展示最近一次运行结果。
   浏览器的 file:// 限制禁止页面 fetch 本地文件，必须经 HTTP 访问：
     Windows：双击同目录的 TEST-GOVERNANCE.bat（启动本地服务器并打开本页）
     通用：python -m http.server 8765 后打开 http://127.0.0.1:8765/TEST-GOVERNANCE.html
@@ -193,6 +194,11 @@ input::placeholder{color:var(--ink-4)}
 .chip:active{transform:translateY(0) scale(.98)}
 .chip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
 .chip .k{opacity:.6;margin-left:5px;font-family:var(--font-mono)}
+/* 运行筛选 chip 兼作图例：未选中时按结果着色，选中态与其他 chip 一致 */
+.chip.run-pass:not(.on){color:var(--p-green)}
+.chip.run-fail:not(.on){color:var(--p-red)}
+.chip.run-skip:not(.on){color:var(--p-amber)}
+.chip.run-none:not(.on){color:var(--p-slate)}
 .hint{margin-left:auto;color:var(--ink-3);font-size:var(--step--2);font-family:var(--font-mono)}
 
 /* ------------------------------------------------------------------ 列表 */
@@ -274,6 +280,10 @@ html[data-density=comfortable] .ctext.end .ctext-in{-webkit-mask-image:none;mask
 .pill[data-p="实现"]{--pc:var(--p-brown)}
 .pill[data-p="回归"]{--pc:var(--p-magenta)}
 .pill[data-p="其他"]{--pc:var(--p-slate)}
+.pill[data-p="通过"]{--pc:var(--p-green)}
+.pill[data-p="失败"]{--pc:var(--p-red);font-weight:600}
+.pill[data-p="跳过"]{--pc:var(--p-amber)}
+.pill[data-p="未运行"]{--pc:var(--p-slate)}
 .more{display:block;width:100%;margin-top:var(--sp-4);background:transparent;border:1px dashed var(--rule-strong);
   color:var(--ink-2);padding:var(--sp-3);font:inherit;font-size:var(--step--1);cursor:pointer;
   border-radius:var(--r-md);transition:var(--dur) var(--ease)}
@@ -320,10 +330,31 @@ html[data-density=comfortable] .ctext.end .ctext-in{-webkit-mask-image:none;mask
 .jump{font-family:var(--font-mono);font-size:var(--step--2);color:var(--accent);cursor:pointer;
   background:var(--accent-soft);border:1px solid transparent;border-radius:var(--r-sm);padding:1px 7px;
   transition:var(--dur) var(--ease);white-space:nowrap}
+/* 运行结果着色：测试 ID 按自身最近运行结果，行为 ID 按生效中测试的派生结果；
+   必须位于 .jump:hover 之前，保证悬浮高亮仍覆盖结果色 */
+.cid.run-pass,.jump.run-pass{color:var(--p-green)}
+.cid.run-fail,.jump.run-fail{color:var(--p-red)}
+.cid.run-skip,.jump.run-skip{color:var(--p-amber)}
+.jump.run-pass{background:color-mix(in srgb,var(--p-green) 10%,var(--surface))}
+.jump.run-fail{background:color-mix(in srgb,var(--p-red) 10%,var(--surface))}
+.jump.run-skip{background:color-mix(in srgb,var(--p-amber) 10%,var(--surface))}
 .jump:hover{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
 .meta{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-5);margin:var(--sp-5) 0 0;font-size:var(--step--2)}
 .meta span{display:inline-flex;gap:6px;align-items:baseline;max-width:100%}
 .meta i{font-style:normal;color:var(--ink-3);white-space:nowrap}
+/* 参数化用例与失败/跳过原因明细，仅展开后显示 */
+.cases{margin-top:var(--sp-2);max-width:76rem;font-size:var(--step--2);display:flex;flex-direction:column;gap:3px}
+.cases b{font-weight:500;color:var(--ink-2);display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
+.cases b i{font-style:normal;color:var(--ink-4)}
+.cases .c-ok{color:var(--p-green)}
+.cases .c-bad{color:var(--p-red);font-weight:600}
+.cases .c-skip{color:var(--p-amber)}
+.case{display:grid;grid-template-columns:1.05rem minmax(0,1fr);gap:2px 7px;align-items:baseline}
+.case .glyph{font-style:normal;font-family:var(--font-mono);text-align:center}
+.case .g-fail{color:var(--p-red);font-weight:600}
+.case .g-skip{color:var(--p-amber)}
+.case-name{grid-column:2;font-family:var(--font-mono);color:var(--ink-2);word-break:break-all}
+.case-msg{grid-column:2;font-family:var(--font-mono);color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ------------------------------------------------------------------ 重复候选 */
 .cluster{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);
@@ -393,8 +424,10 @@ footer code{background:var(--surface-2);padding:1px 5px;border-radius:var(--r-sm
 
 /* 数据源契约：文件内可包含任意多张“表头 + 分隔行 + 数据行”的标准管道表，
    全部合并读取（表之间可以有标题等文字间隔）；行是否有效、条目间如何关联，
-   均以 ID 正则（B-\d+ / T-\d+）判定，不依赖分隔符写法。 */
+   均以 ID 正则（B-\d+ / T-\d+）判定，不依赖分隔符写法。
+   TEST-RUN.xml 存在时按 JUnit XML 解析，与生效中的测试行匹配后合并出运行结果。 */
 const FILES = { behaviors: 'BEHAVIORS.md', tests: 'TEST-DISPOSITION.md' };
+const REPORT_FILE = 'TEST-RUN.xml';
 const POLL_MS = 5000;
 const PAGE = 120;
 
@@ -445,9 +478,9 @@ function derive(behaviors, tests){
     .filter(g => g.tests.length > 1)
     .sort((a, z) => (order.get(a.bid) ?? Infinity) - (order.get(z.bid) ?? Infinity));
   const dupSet = new Set(clusters.map(g => g.bid));
-  return { behaviors: bh, tests: th, byId, testById, testsOf, dupSet, clusters };
+  return { behaviors: bh, tests: th, byId, testById, testsOf, dupSet, clusters, run: emptyRun() };
 }
-function deriveFromRaw(rawTexts){
+function deriveFromRaw(rawTexts, runRaw){
   const behaviors = parseTable(rawTexts.behaviors).map(r => ({
     id: (r['ID'] || '').trim(), module: r['模块'] || '', behavior: r['行为'] || '',
     level: r['层级'] || '', basis: r['依据'] || '', importance: r['重要性'] || '',
@@ -459,12 +492,134 @@ function deriveFromRaw(rawTexts){
     disposition: r['处置'] || '', reason: r['原因'] || '',
     alt: r['替代测试'] || '', status: r['状态'] || '',
   })).filter(r => /^T-\d+/.test(r.id));
-  return derive(behaviors, tests);
+  return applyRun(derive(behaviors, tests), runRaw);
+}
+
+/* ---------- 运行结果合并 ---------- */
+
+/* 运行结果 → CSS 类名。ID 着色只用 通过/失败/跳过 三种；未运行与无数据不着色，
+   run-none 仅供筛选 chip 做弱着色（兼图例） */
+const RUN_CLS = { '通过': 'run-pass', '失败': 'run-fail', '跳过': 'run-skip', '未运行': 'run-none' };
+const runCls = v => RUN_CLS[v] || '';
+const idRunCls = id => { const r = kindOf(id) === 'beh' ? data.byId[id] : data.testById[id]; return r ? runCls(r.run) : ''; };
+
+function fmtTime(s){
+  if (!s) return '';
+  const d = new Date(s);
+  if (isNaN(d)) return s.length > 19 ? s.slice(0, 19).replace('T', ' ') : s;
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function parseJUnit(xml){
+  let doc;
+  try { doc = new DOMParser().parseFromString(xml, 'application/xml'); }
+  catch { return null; }
+  if (doc.querySelector('parsererror')) return null;
+  const cases = [...doc.querySelectorAll('testcase')].map(tc => {
+    const kids = [...tc.children];
+    const hit = kids.find(c => c.tagName === 'failure' || c.tagName === 'error' || c.tagName === 'skipped');
+    const status = hit ? (hit.tagName === 'skipped' ? '跳过' : '失败') : '通过';
+    // 原因优先取 message 属性；缺失时回退正文首个非空行（pytest 的正文是完整堆栈）
+    let msg = '';
+    if (hit) {
+      msg = (hit.getAttribute('message') || '').trim();
+      if (!msg) msg = (hit.textContent || '').split('\n').map(s => s.trim()).filter(Boolean)[0] || '';
+      if (msg.length > 400) msg = msg.slice(0, 400) + '…';
+    }
+    return { file: tc.getAttribute('file') || '', classname: tc.getAttribute('classname') || '',
+             name: tc.getAttribute('name') || '', status, msg };
+  });
+  const ts = doc.querySelector('[timestamp]');
+  return { cases, timestamp: ts ? ts.getAttribute('timestamp') : '' };
+}
+
+/* 把报告条目合并进视图模型：逐条测试行写入 run（聚合取最差）与 runCases（参数化明细），
+   行为行按生效中测试派生 run（有失败→失败；全部运行且通过→通过；否则不着色） */
+function applyRun(d, runRaw){
+  d.run = emptyRun();
+  if (!runRaw) return d;
+  const parsed = parseJUnit(runRaw.xml);
+  if (!parsed) return d;
+  const run = d.run;
+  run.loaded = true;
+  run.time = fmtTime(parsed.timestamp || runRaw.mtime);
+  for (const e of parsed.cases) {
+    if (e.status === '失败') run.fail++; else if (e.status === '跳过') run.skip++; else run.pass++;
+  }
+  matchRunEntries(d, parsed.cases, run);
+  for (const b of d.behaviors) {
+    const cands = (d.testsOf[b.id] || []).filter(t => t.status === '生效中');
+    b.run = cands.length && cands.some(t => t.run === '失败') ? '失败'
+      : cands.length && cands.every(t => t.run === '通过') ? '通过' : undefined;
+  }
+  return d;
+}
+
+/* JUnit 各框架字段语义不一：pytest 的 classname 是点分模块路径（testcase 自带 file 属性），
+   vitest/jest 的 classname 常是文件路径、name 带 describe 前缀，go 是包路径且无 file。
+   按四级匹配，任何一级出现歧义即放弃该级，宁可漏配（计入未登记）也不错配：
+   ① 文件+完整名 ② 文件+去参数名 ③ classname 转路径与文件列互为后缀+名 ④ 仅名（两侧均唯一） */
+function matchRunEntries(d, entries, run){
+  const norm = p => p.replace(/\\/g, '/').replace(/^\.\//, '').trim();
+  const noExt = p => p.replace(/\.[^.]+$/, '');
+  const stripParam = n => { let s = n.trim(); while (/\[[^\]]*\]$/.test(s)) s = s.slice(0, s.lastIndexOf('[')).trim(); return s; };
+  const lastSeg = n => { const i = n.lastIndexOf('>'); return (i >= 0 ? n.slice(i + 1) : n).trim(); };
+
+  const eff = d.tests.filter(t => t.status === '生效中');
+  const byFile = new Map(), byFileBase = new Map(), byName = new Map(), byBase = new Map();
+  const push = (m, k, v) => { const a = m.get(k); if (a) a.push(v); else m.set(k, [v]); };
+  for (const t of eff) {
+    const f = norm(t.file), n = t.name.trim();
+    t.runCases = [];
+    push(byFile, f + '|' + n, t);
+    push(byFileBase, f + '|' + stripParam(n), t);
+    push(byName, n, t);
+    push(byBase, stripParam(n), t);
+  }
+  const nameFreq = new Map(), baseFreq = new Map();
+  for (const e of entries) {
+    push(nameFreq, e.name.trim(), e);
+    push(baseFreq, stripParam(e.name), e);
+  }
+  const single = (m, k) => { const a = m.get(k); return a && a.length === 1 ? a[0] : null; };
+  for (const e of entries) {
+    const f = norm(e.file), n = e.name.trim(), b = stripParam(n), b2 = stripParam(lastSeg(n));
+    const cls = norm(e.classname), clsDots = cls.replace(/\./g, '/');
+    let row = null;
+    if (f) row = single(byFile, f + '|' + n) || single(byFileBase, f + '|' + b);
+    if (!row && cls) {
+      const names = new Set([n, b, b2]);
+      // classname 两种形态各配去扩展名变体：路径式（vitest/jest）靠 noExt 命中，点分式（pytest/go）靠 clsDots 命中
+      const paths = [cls, clsDots, noExt(cls), noExt(clsDots)];
+      const cands = eff.filter(t => {
+        const tf = noExt(norm(t.file));
+        if (!tf) return false;
+        if (!paths.some(c => c && (tf.endsWith(c) || c.endsWith(tf)))) return false;
+        const tn = t.name.trim();
+        return names.has(tn) || names.has(stripParam(tn)) || names.has(stripParam(lastSeg(tn)));
+      });
+      if (cands.length === 1) row = cands[0];
+    }
+    if (!row) {
+      const rn = single(byName, n), rb = single(byBase, b);
+      if (rn && (nameFreq.get(n) || []).length === 1) row = rn;
+      else if (rb && (baseFreq.get(b) || []).length === 1) row = rb;
+    }
+    if (!row) { run.unregistered++; continue; }
+    row.runCases.push({ name: e.name, status: e.status, msg: e.msg });
+  }
+  const weight = { '通过': 1, '跳过': 2, '失败': 3 };
+  for (const t of eff) {
+    if (!t.runCases.length) { t.run = '未运行'; continue; }
+    t.run = t.runCases.reduce((w, c) => weight[c.status] > weight[w] ? c.status : w, '通过');
+  }
 }
 
 /* ---------- 全局状态 ---------- */
 
-let data = { behaviors: [], tests: [], byId: {}, testById: {}, testsOf: {}, dupSet: new Set(), clusters: [] };
+const emptyRun = () => ({ loaded: false, time: '', pass: 0, fail: 0, skip: 0, unregistered: 0 });
+let data = { behaviors: [], tests: [], byId: {}, testById: {}, testsOf: {}, dupSet: new Set(), clusters: [], run: emptyRun() };
 let snapshotMode = false;
 let lastSig = null;
 let view = 'overview';
@@ -472,7 +627,7 @@ const expanded = new Set();
 const pages = { beh: 0, test: 0 };
 const FILTER = {
   beh: { module: '__all', layer: new Set(), imp: new Set(), stab: new Set(), st: new Set(), dup: false, q: '' },
-  test: { file: '__all', disp: new Set(), type: new Set(), q: '' },
+  test: { file: '__all', disp: new Set(), type: new Set(), run: new Set(), q: '' },
 };
 
 const $ = sel => document.querySelector(sel);
@@ -562,6 +717,7 @@ function renderOverview(){
     <div class="ledger">
       <div><b>${B.length}</b><span>行为契约</span><i>${valid.length} 有效</i></div>
       <div><b>${T.length}</b><span>测试记录</span><i>${active.length} 生效中</i></div>
+      ${data.run.loaded ? `<div${data.run.time ? ` title="报告时间 ${esc(data.run.time)}"` : ''}><b class="${data.run.fail ? 'risk' : ''}">${data.run.fail}</b><span>最近运行</span><i>通过 ${data.run.pass}${data.run.skip ? ` · 跳过 ${data.run.skip}` : ''}</i></div>` : ''}
       <div><b>${new Set(T.map(r => r.file)).size}</b><span>测试文件</span></div>
       <div><b>${cov === null ? '—' : cov + '%'}</b><span>行为覆盖率</span>${uncovered.length ? `<i class="risk">未覆盖 ${uncovered.length}</i>` : '<i>全部覆盖</i>'}</div>
       <div><b>${nMerge}<em> +${nRewrite}</em></b><span>合并 / 重写</span></div>
@@ -605,10 +761,10 @@ const HEAD = {
   beh: `<div class="listhead"><span>ID</span><span>层级</span><span>模块</span><span>行为</span><span>重要性</span><span>稳定性</span><span>状态</span><span>测试</span></div>`,
   test: `<div class="listhead"><span>ID</span><span>测试</span><span>文件</span><span>类型</span><span>处置</span><span>行为</span></div>`,
 };
-function chipRow(set, cfgKey, field, values, src){
+function chipRow(set, cfgKey, field, values, src, cls){
   const counts = {}; for (const r of src) counts[r[field]] = (counts[r[field]] || 0) + 1;
   return `<span class="chips">` + values.filter(v => counts[v]).map(v =>
-    `<span class="chip ${set.has(v) ? 'on' : ''}" data-set="${cfgKey}" data-val="${esc(v)}">${esc(v)}<span class="k">${counts[v]}</span></span>`).join('') + `</span>`;
+    `<span class="chip ${cls ? cls(v) : ''} ${set.has(v) ? 'on' : ''}" data-set="${cfgKey}" data-val="${esc(v)}">${esc(v)}<span class="k">${counts[v]}</span></span>`).join('') + `</span>`;
 }
 function buildFilters(kind){
   const cfg = FILTER[kind];
@@ -626,6 +782,7 @@ function buildFilters(kind){
       .map(f => `<option value="${esc(f)}" ${cfg.file === f ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select>`;
     html += chipRow(cfg.disp, 'disp', 'disposition', ['保留', '合并', '重写', '删除', '待确认'], data.tests);
     html += chipRow(cfg.type, 'type', 'type', uniq(data.tests.map(r => r.type).filter(Boolean)), data.tests);
+    if (data.run.loaded) html += chipRow(cfg.run, 'run', 'run', ['通过', '失败', '跳过', '未运行'], data.tests, runCls);
   }
   html += `<input type="search" data-k="q" placeholder="搜索${kind === 'beh' ? '行为、依据、模块' : '测试名、原因、文件'}（/ 聚焦）" value="${esc(cfg.q)}" aria-label="搜索">`;
   html += `<span class="hint" id="${kind}Hint"></span>`;
@@ -645,7 +802,7 @@ function buildFilters(kind){
 function clearFilters(kind){
   const c = FILTER[kind];
   c.module = '__all'; c.file = '__all'; c.q = ''; c.dup = false;
-  for (const k of ['layer', 'imp', 'stab', 'st', 'disp', 'type']) if (c[k]) c[k] = new Set();
+  for (const k of ['layer', 'imp', 'stab', 'st', 'disp', 'type', 'run']) if (c[k]) c[k] = new Set();
   pages[kind] = 0; buildFilters(kind);
 }
 const behMatch = r => { const c = FILTER.beh;
@@ -657,6 +814,7 @@ const behMatch = r => { const c = FILTER.beh;
 const testMatch = r => { const c = FILTER.test;
   return (c.file === '__all' || r.file === c.file)
     && (!c.disp.size || c.disp.has(r.disposition)) && (!c.type.size || c.type.has(r.type))
+    && (!c.run.size || (r.run && c.run.has(r.run)))
     && (!c.q || (r.name + ' ' + r.reason + ' ' + r.file + ' ' + r.id + ' ' + r.bids.join(' ')).toLowerCase().includes(c.q)); };
 
 /* ---------- 列表 ---------- */
@@ -741,11 +899,11 @@ function toggle(id, row){
 }
 function behRow(r, i = 0){
   const ts = data.testsOf[r.id] || [];
-  const beh = ts.length ? ts.map(t => `<span class="jump" data-jump="${t.id}">${t.id}</span>`).join(' ') : '—';
+  const beh = ts.length ? ts.map(t => `<span class="jump ${idRunCls(t.id)}" data-jump="${t.id}">${t.id}</span>`).join(' ') : '—';
   return `<article class="row stagger" data-id="${r.id}" data-open="${expanded.has(r.id) ? 1 : 0}"
     tabindex="0" role="button" aria-expanded="${expanded.has(r.id)}" style="animation-delay:${Math.min(i, 40) * 8}ms">
     <div class="rw">
-      <span class="cid">${esc(r.id)}</span><span>${pill(r.level)}</span><span class="cmod">${esc(r.module)}</span>
+      <span class="cid ${idRunCls(r.id)}">${esc(r.id)}</span><span>${pill(r.level)}</span><span class="cmod">${esc(r.module)}</span>
       <span class="ctext"><span class="ctext-in">${esc(r.behavior)}</span><button class="slide prev" type="button" hidden aria-label="向左滚动"><svg viewBox="0 0 8 12" fill="none" aria-hidden="true"><path d="M6.5 1 1.5 6 6.5 11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="slide next" type="button" hidden aria-label="向右滚动"><svg viewBox="0 0 8 12" fill="none" aria-hidden="true"><path d="M1.5 1 6.5 6 1.5 11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button></span>
       <span class="imp">${pill(r.importance)}</span><span class="stab">${pill(r.stability)}</span>
       <span class="st">${pill(r.status)}</span>
@@ -757,7 +915,7 @@ function behDetail(id){
   const effective = ts.filter(t => t.status !== '已删除');
   const list = ts.length
     ? `<div class="tlist">` + ts.map(t =>
-        `<a data-jump="${t.id}"><span class="cid">${t.id}</span><span>${pill(t.disposition)}</span><span class="tn">${esc(t.name)}</span></a>`).join('') + `</div>`
+        `<a data-jump="${t.id}"><span class="cid ${idRunCls(t.id)}">${t.id}</span><span>${pill(t.disposition)}</span><span class="tn">${esc(t.name)}</span></a>`).join('') + `</div>`
     : `<div class="card-l gap">没有任何测试引用这条行为 —— 覆盖缺口，需要补测试或把它标为废弃。</div>`;
   const gap = ts.length && !effective.length
     ? `<div class="card-l gap" style="margin-top:var(--sp-2)">引用它的测试均已删除或废弃 —— 覆盖缺口。</div>` : '';
@@ -766,11 +924,11 @@ function behDetail(id){
     <div class="meta"><span><i>层级</i>${pill(r.level)}</span><span><i>稳定性</i>${pill(r.stability)}</span><span><i>状态</i>${pill(r.status)}</span></div></div></div>`;
 }
 function testRow(r, i = 0){
-  const beh = r.bids.length ? r.bids.map(b => `<span class="jump" data-jump="${b}">${b}</span>`).join(' ') : '—';
+  const beh = r.bids.length ? r.bids.map(b => `<span class="jump ${idRunCls(b)}" data-jump="${b}">${b}</span>`).join(' ') : '—';
   return `<article class="row stagger${r.status === '已删除' ? ' dimmed' : ''}" data-id="${r.id}"
     data-open="${expanded.has(r.id) ? 1 : 0}" tabindex="0" role="button" aria-expanded="${expanded.has(r.id)}"
     style="animation-delay:${Math.min(i, 40) * 8}ms">
-    <div class="rw"><span class="cid">${esc(r.id)}</span><span class="cname">${esc(r.name)}</span>
+    <div class="rw"><span class="cid ${idRunCls(r.id)}">${esc(r.id)}</span><span class="cname">${esc(r.name)}</span>
       <span class="cfile">${esc(r.file)}</span>
       <span class="ftype">${pill(r.type)}</span><span>${pill(r.disposition)}</span><span class="fbeh">${beh}</span>
     </div>${expanded.has(r.id) ? testDetail(r.id) : ''}</article>`;
@@ -779,15 +937,44 @@ function testDetail(id){
   const r = data.testById[id];
   const beh = r.bids.length
     ? `<div class="tlist">` + r.bids.map(b => { const x = data.byId[b];
-        return `<a data-jump="${b}"><span class="cid">${b}</span><span>${x ? pill(x.level) : ''}</span><span class="tb">${esc(x ? x.behavior : '（未知行为）')}</span></a>`; }).join('') + `</div>`
+        return `<a data-jump="${b}"><span class="cid ${idRunCls(b)}">${b}</span><span>${x ? pill(x.level) : ''}</span><span class="tb">${esc(x ? x.behavior : '（未知行为）')}</span></a>`; }).join('') + `</div>`
     : '—';
   const altIds = r.alt.match(/T-\d+/g) || [];
   const alt = r.alt && r.alt !== '—'
-    ? (altIds.map(x => `<span class="jump" data-jump="${x}">${x}</span>`).join(' ') || esc(r.alt))
+    ? (altIds.map(x => `<span class="jump ${idRunCls(x)}" data-jump="${x}">${x}</span>`).join(' ') || esc(r.alt))
+    : '—';
+  const runHtml = r.run
+    ? `<span class="pill" data-p="${esc(r.run)}">${esc(r.run)}</span>${data.run.time ? ` <code>${esc(data.run.time)}</code>` : ''}`
     : '—';
   return `<div class="detail"><div class="detail-in"><h4>处置原因</h4><div class="card-l${r.disposition === '待确认' || r.disposition === '删除' ? ' crit' : ''}">${esc(r.reason) || '—'}</div>
     <h4>固化的行为</h4>${beh}
-    <div class="meta"><span><i>文件</i><code>${esc(r.file)}</code></span><span><i>替代测试</i>${alt}</span><span><i>类型</i>${pill(r.type)}</span><span><i>状态</i>${pill(r.status)}</span></div></div></div>`;
+    <div class="meta"><span><i>文件</i><code>${esc(r.file)}</code></span><span><i>替代测试</i>${alt}</span><span><i>类型</i>${pill(r.type)}</span><span><i>状态</i>${pill(r.status)}</span><span><i>运行</i>${runHtml}</span></div>${casesHtml(r)}</div></div>`;
+}
+/* 用例明细：多用例（参数化）先给分状态计数，再逐条列失败与跳过的用例名和原因；
+   单用例不重复用例名，只补失败/跳过原因。通过的用例只计数量，不逐条列出 */
+function casesHtml(r){
+  const cs = r.runCases || [];
+  const bad = cs.filter(c => c.status !== '通过');
+  if (!bad.length) return '';
+  const fail = bad.filter(c => c.status === '失败');
+  const skip = bad.filter(c => c.status === '跳过');
+  const pass = cs.length - bad.length;
+  const line = c => {
+    const failCase = c.status === '失败';
+    return `<div class="case"><i class="glyph ${failCase ? 'g-fail' : 'g-skip'}" aria-hidden="true">${failCase ? '✕' : '○'}</i>`
+      + (cs.length > 1 ? `<span class="case-name">${esc(c.name)}</span>` : '')
+      + (c.msg ? `<span class="case-msg" title="${esc(c.msg)}">${esc(c.msg)}</span>` : '')
+      + `</div>`;
+  };
+  let head = '';
+  if (cs.length > 1) {
+    const seg = [];
+    if (pass) seg.push(`<span class="c-ok">通过 ${pass}</span>`);
+    if (fail.length) seg.push(`<span class="c-bad">失败 ${fail.length}</span>`);
+    if (skip.length) seg.push(`<span class="c-skip">跳过 ${skip.length}</span>`);
+    head = `<b>用例 ${cs.length}${seg.length ? `<i>·</i>${seg.join('<i>·</i>')}` : ''}</b>`;
+  } else if (!bad[0].msg) return '';
+  return `<div class="cases">${head}${[...fail, ...skip].map(line).join('')}</div>`;
 }
 
 /* ---------- 跳转 ---------- */
@@ -846,8 +1033,8 @@ function renderDupes(){
     ${data.clusters.map((g, i) => { const b = data.byId[g.bid];
       return `<div class="cluster"><div class="hd"><span>组 <b>${i + 1}</b></span><span>${g.tests.length} 个测试</span></div>
         <div class="tlist">
-          <a data-jump="${g.bid}"><span class="cid">${esc(g.bid)}</span><span>${b ? pill(b.level) : ''}</span><span class="tb">${esc(b ? b.behavior : '（未知行为）')}</span></a>
-          ${g.tests.map(t => `<a data-jump="${t.id}"><span class="cid">${t.id}</span><span>${pill(t.disposition)}</span><span class="tn">${esc(t.name)}</span></a>`).join('')}
+          <a data-jump="${g.bid}"><span class="cid ${idRunCls(g.bid)}">${esc(g.bid)}</span><span>${b ? pill(b.level) : ''}</span><span class="tb">${esc(b ? b.behavior : '（未知行为）')}</span></a>
+          ${g.tests.map(t => `<a data-jump="${t.id}"><span class="cid ${idRunCls(t.id)}">${t.id}</span><span>${pill(t.disposition)}</span><span class="tn">${esc(t.name)}</span></a>`).join('')}
         </div></div>`;
     }).join('') || '<div class="empty"><strong>没有重复候选</strong>没有行为同时被多个未删除测试固化。</div>'}`;
   document.getElementById('dupes').onclick = e => { const l = e.target.closest('[data-jump]'); if (l) jumpTo(l.dataset.jump); };
@@ -863,6 +1050,14 @@ async function fetchFiles(){
   return Object.fromEntries(entries);
 }
 
+/* 运行报告缺失属正常态（未生成或被清理），静默返回 null，不进缺失提示 */
+async function fetchRun(){
+  try {
+    const r = await fetch(REPORT_FILE, { cache: 'no-store' });
+    return r.ok ? { xml: await r.text(), mtime: r.headers.get('last-modified') || '' } : null;
+  } catch { return null; }
+}
+
 function renderAll(){
   renderNav();
   if (view === 'overview') renderOverview();
@@ -872,17 +1067,21 @@ function renderAll(){
 }
 
 async function refresh(){
-  const next = await fetchFiles();
+  const [next, runRaw] = await Promise.all([fetchFiles(), fetchRun()]);
   const missing = Object.entries(next).filter(([, v]) => v === null).map(([, f]) => f);
-  const sig = JSON.stringify(next);
-  if (sig !== lastSig) { lastSig = sig; data = deriveFromRaw(next); renderAll(); }
+  const sig = JSON.stringify([next.behaviors, next.tests, runRaw]);
+  if (sig !== lastSig) { lastSig = sig; data = deriveFromRaw(next, runRaw); renderAll(); }
   const notice = document.getElementById('notice');
-  notice.hidden = !missing.length;
+  let msg = '';
   if (missing.length) {
-    notice.textContent = location.protocol === 'file:'
+    msg = location.protocol === 'file:'
       ? '双击打开的页面无法读取本地文件：请双击同目录的 TEST-GOVERNANCE.bat，或经静态服务器（如 python -m http.server 8765）访问本页'
       : `未找到 ${missing.join('、')}：请先在项目根目录生成两份表`;
+  } else if (data.run.loaded && data.run.unregistered) {
+    msg = `最近一次测试报告中有 ${data.run.unregistered} 个测试未登记入表，请在 TEST-DISPOSITION.md 补充登记`;
   }
+  notice.hidden = !msg;
+  notice.textContent = msg;
 }
 
 /* ---------- 快照导出 ---------- */
@@ -890,8 +1089,9 @@ async function refresh(){
 function buildSnapshotHtml(){
   const payload = JSON.stringify({
     savedAt: new Date().toISOString(),
-    behaviors: data.behaviors,
-    tests: data.tests,
+    // 运行结果是视图从报告文件动态合并的派生数据，不属于治理清单，不入快照
+    behaviors: data.behaviors.map(({ run, ...b }) => b),
+    tests: data.tests.map(({ run, runCases, ...t }) => t),
   }).replace(/<\//g, '<\\/'); // JSON 内嵌进 <script> 前转义闭合序列
   const doc = document.documentElement.cloneNode(true);
   // 克隆里的旧渲染内容不清空：骨架（过滤条/列表容器）是 boot 重建的前提，
