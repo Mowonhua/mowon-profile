@@ -9,6 +9,8 @@
 <!--
   测试治理视图：从同目录的 BEHAVIORS.md 与 TEST-DISPOSITION.md 实时读取并渲染两份测试治理表，
   并在存在 TEST-RUN.xml（JUnit XML 测试报告）时合并展示最近一次运行结果。
+  TEST-DISPOSITION.md 的「创建提交」列只登记 7 位短 hash，提交时间与信息原文由本地服务器经 git 按 hash 实时读取，
+  在悬浮卡中按 markdown 展示；普通静态服务器无读取接口，此时只显示 hash。
   浏览器的 file:// 限制禁止页面 fetch 本地文件，必须经 HTTP 访问：
     Windows：双击同目录的 TEST-GOVERNANCE.bat（启动本地服务器并打开本页）
     通用：python -m http.server 8765 后打开 http://127.0.0.1:8765/TEST-GOVERNANCE.html
@@ -356,6 +358,30 @@ html[data-density=comfortable] .ctext.end .ctext-in{-webkit-mask-image:none;mask
 .case-name{grid-column:2;font-family:var(--font-mono);color:var(--ink-2);word-break:break-all}
 .case-msg{grid-column:2;font-family:var(--font-mono);color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
+/* ------------------------------------------------------------------ 提交悬浮卡 */
+/* 触发元素只显式展示短 hash 与提交时间，完整信息悬浮展示；卡片 pointer-events:none
+   不拦截鼠标，避免卡片盖住触发元素后隐现抖动 */
+.commit{cursor:help;white-space:nowrap}
+.commit code{color:var(--accent);font-weight:600}
+.commit:hover code{color:var(--accent-2);text-decoration:underline dotted;text-underline-offset:2px}
+.commit .ctime{color:var(--ink-3)}
+#commitCard{position:fixed;z-index:var(--z-top);width:max-content;max-width:min(34rem,calc(100vw - 2rem));
+  background:var(--surface);border:1px solid var(--rule-strong);border-radius:var(--r-md);
+  box-shadow:var(--shadow);padding:var(--sp-3) var(--sp-4);pointer-events:none;
+  font-size:var(--step--2);line-height:1.7}
+#commitCard:not([hidden]){animation:rise 180ms var(--ease) both}
+#commitCard .cc-head{display:flex;gap:var(--sp-3);align-items:baseline;font-family:var(--font-mono);white-space:nowrap}
+#commitCard .cc-head code{color:var(--accent);font-weight:600}
+#commitCard .cc-head .ctime{color:var(--ink-3)}
+#commitCard .cc-body{margin-top:var(--sp-2);padding-top:var(--sp-2);border-top:1px solid var(--rule);
+  color:var(--ink-2);overflow-wrap:anywhere}
+#commitCard .cc-body p{margin:0}
+#commitCard .cc-body p+p,#commitCard .cc-body ul+p,#commitCard .cc-body ol+p{margin-top:var(--sp-2)}
+#commitCard .cc-body ul,#commitCard .cc-body ol{margin:var(--sp-1) 0 0;padding-left:1.25rem}
+#commitCard .cc-body li+li{margin-top:2px}
+#commitCard .cc-body h6{margin:var(--sp-2) 0 0;font-size:var(--step--1);font-weight:600;color:var(--ink)}
+#commitCard .cc-none{color:var(--ink-4)}
+
 /* ------------------------------------------------------------------ 重复候选 */
 .cluster{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);
   padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-3);transition:var(--dur) var(--ease)}
@@ -425,6 +451,8 @@ footer code{background:var(--surface-2);padding:1px 5px;border-radius:var(--r-sm
 /* 数据源契约：文件内可包含任意多张“表头 + 分隔行 + 数据行”的标准管道表，
    全部合并读取（表之间可以有标题等文字间隔）；行是否有效、条目间如何关联，
    均以 ID 正则（B-\d+ / T-\d+）判定，不依赖分隔符写法。
+   测试处置表可含「创建提交」列（7 位短 hash）；提交时间与信息原文不写入文档，由视图经
+   /__commit 接口用本仓库 git 按 hash 实时读取，供展开详情的提交悬浮卡展示。
    TEST-RUN.xml 存在时按 JUnit XML 解析，与生效中的测试行匹配后合并出运行结果。 */
 const FILES = { behaviors: 'BEHAVIORS.md', tests: 'TEST-DISPOSITION.md' };
 const REPORT_FILE = 'TEST-RUN.xml';
@@ -461,6 +489,9 @@ function parseTable(text){
   return tables;
 }
 
+/* 「创建提交」单元格 → 7 位短 hash：容错提取其中的 hex 串，读不到（如 `—`）返回空串 */
+const commitHash = v => (String(v ?? '').match(/[0-9a-fA-F]{7,40}/) || [''])[0].slice(0, 7);
+
 /* 由两份表的行数组构建视图模型：映射、重复候选、关联索引。
    实时模式从 MD 解析后调用，快照模式直接以内嵌数据调用。 */
 function derive(behaviors, tests){
@@ -490,7 +521,7 @@ function deriveFromRaw(rawTexts, runRaw){
     id: (r['ID'] || '').trim(), name: r['测试'] || '', file: r['文件'] || '',
     bids: (r['行为 ID'] || '').match(/B-\d+/g) || [], type: r['测试类型'] || '',
     disposition: r['处置'] || '', reason: r['原因'] || '',
-    alt: r['替代测试'] || '', status: r['状态'] || '',
+    alt: r['替代测试'] || '', status: r['状态'] || '', commit: commitHash(r['创建提交']),
   })).filter(r => /^T-\d+/.test(r.id));
   return applyRun(derive(behaviors, tests), runRaw);
 }
@@ -638,6 +669,57 @@ const kindOf = id => id[0] === 'B' ? 'beh' : 'test';
 const uniq = a => [...new Set(a)].sort();
 const count = (arr, key) => { const o = {}; for (const r of arr) o[r[key]] = (o[r[key]] || 0) + 1; return o; };
 
+/* 提交信息是受限 markdown：标题、有序/无序列表（按缩进嵌套，嵌套列表挂在上一层
+   尚未闭合的 <li> 内）与段落，行内支持 `code` 与 **加粗**；先整体转义再做行内替换，杜绝注入 */
+function renderMd(src){
+  const lines = String(src ?? '').replace(/\r\n?/g, '\n').split('\n');
+  const inline = s => esc(s)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  const out = [];
+  let list = [], para = []; // list 栈记录每层列表类型与其 <li> 是否尚未闭合
+  const flushPara = () => { if (para.length) { out.push(`<p>${para.map(inline).join('<br>')}</p>`); para = []; } };
+  const closeTo = depth => { while (list.length > depth) { const lv = list.pop();
+    if (lv.openLi) out.push('</li>'); out.push(`</${lv.tag}>`); } };
+  const openItem = () => { out.push('<li>'); list[list.length - 1].openLi = true; };
+  for (const raw of lines) {
+    const line = raw.replace(/\t/g, '  ');
+    const hm = line.match(/^#{1,6}\s+(.*)$/);
+    const lm = line.match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);
+    if (hm) { flushPara(); closeTo(0); out.push(`<h6>${inline(hm[1])}</h6>`); continue; }
+    if (lm) {
+      flushPara();
+      const depth = Math.floor(lm[1].length / 2), tag = /^[-*+]$/.test(lm[2]) ? 'ul' : 'ol';
+      if (depth > list.length - 1) { list.push({ tag, openLi: false }); out.push(`<${tag}>`); }
+      else if (depth < list.length - 1) {
+        closeTo(depth + 1);
+        const top = list[list.length - 1];
+        if (top.openLi) { out.push('</li>'); top.openLi = false; }
+        if (top.tag !== tag) { out.push(`</${top.tag}>`); out.push(`<${tag}>`); list[list.length - 1] = { tag, openLi: false }; }
+      } else {
+        const top = list[list.length - 1];
+        if (top.tag !== tag) { if (top.openLi) out.push('</li>'); out.push(`</${top.tag}>`); out.push(`<${tag}>`); list[list.length - 1] = { tag, openLi: false }; }
+        else if (top.openLi) out.push('</li>');
+      }
+      openItem();
+      out.push(inline(lm[3]));
+      continue;
+    }
+    if (!line.trim()) { flushPara(); closeTo(0); continue; }
+    para.push(line.trim());
+  }
+  flushPara(); closeTo(0);
+  return out.join('');
+}
+
+/* 展开详情的提交属性：只显式展示短 hash 与提交时间，信息经悬浮卡查看 */
+const commitMeta = r => {
+  if (!r.commit) return '—';
+  const info = commitCache.get(r.commit);
+  const time = info ? fmtTime(info.time) : '';
+  return `<span class="commit" data-hash="${esc(r.commit)}"><code>${esc(r.commit)}</code>${time ? `<span class="ctime">${esc(time)}</span>` : ''}</span>`;
+};
+
 /* ---------- 主题 / 密度 ---------- */
 
 const prefersDark = matchMedia('(prefers-color-scheme: dark)').matches;
@@ -671,6 +753,7 @@ function renderNav(){
   nav.onclick = e => { const b = e.target.closest('button'); if (b) go(b.dataset.v); };
 }
 function go(v){
+  hideCommitCard();
   view = v; renderNav();
   for (const s of document.querySelectorAll('main section')) s.hidden = s.id !== v;
   if (v === 'beh' || v === 'test') { buildFilters(v); renderList(v); }
@@ -784,7 +867,7 @@ function buildFilters(kind){
     html += chipRow(cfg.type, 'type', 'type', uniq(data.tests.map(r => r.type).filter(Boolean)), data.tests);
     if (data.run.loaded) html += chipRow(cfg.run, 'run', 'run', ['通过', '失败', '跳过', '未运行'], data.tests, runCls);
   }
-  html += `<input type="search" data-k="q" placeholder="搜索${kind === 'beh' ? '行为、依据、模块' : '测试名、原因、文件'}（/ 聚焦）" value="${esc(cfg.q)}" aria-label="搜索">`;
+  html += `<input type="search" data-k="q" placeholder="搜索${kind === 'beh' ? '行为、依据、模块' : '测试名、原因、文件、提交'}（/ 聚焦）" value="${esc(cfg.q)}" aria-label="搜索">`;
   html += `<span class="hint" id="${kind}Hint"></span>`;
   const host = document.getElementById(kind + 'Filters');
   host.innerHTML = html;
@@ -815,7 +898,7 @@ const testMatch = r => { const c = FILTER.test;
   return (c.file === '__all' || r.file === c.file)
     && (!c.disp.size || c.disp.has(r.disposition)) && (!c.type.size || c.type.has(r.type))
     && (!c.run.size || (r.run && c.run.has(r.run)))
-    && (!c.q || (r.name + ' ' + r.reason + ' ' + r.file + ' ' + r.id + ' ' + r.bids.join(' ')).toLowerCase().includes(c.q)); };
+    && (!c.q || (r.name + ' ' + r.reason + ' ' + r.file + ' ' + r.id + ' ' + r.bids.join(' ') + ' ' + r.commit).toLowerCase().includes(c.q)); };
 
 /* ---------- 列表 ---------- */
 
@@ -948,7 +1031,7 @@ function testDetail(id){
     : '—';
   return `<div class="detail"><div class="detail-in"><h4>处置原因</h4><div class="card-l${r.disposition === '待确认' || r.disposition === '删除' ? ' crit' : ''}">${esc(r.reason) || '—'}</div>
     <h4>固化的行为</h4>${beh}
-    <div class="meta"><span><i>文件</i><code>${esc(r.file)}</code></span><span><i>替代测试</i>${alt}</span><span><i>类型</i>${pill(r.type)}</span><span><i>状态</i>${pill(r.status)}</span><span><i>运行</i>${runHtml}</span></div>${casesHtml(r)}</div></div>`;
+    <div class="meta"><span><i>文件</i><code>${esc(r.file)}</code></span><span><i>替代测试</i>${alt}</span><span><i>类型</i>${pill(r.type)}</span><span><i>状态</i>${pill(r.status)}</span><span><i>提交</i>${commitMeta(r)}</span><span><i>运行</i>${runHtml}</span></div>${casesHtml(r)}</div></div>`;
 }
 /* 用例明细：多用例（参数化）先给分状态计数，再逐条列失败与跳过的用例名和原因；
    单用例不重复用例名，只补失败/跳过原因。通过的用例只计数量，不逐条列出 */
@@ -1040,6 +1123,86 @@ function renderDupes(){
   document.getElementById('dupes').onclick = e => { const l = e.target.closest('[data-jump]'); if (l) jumpTo(l.dataset.jump); };
 }
 
+/* ---------- 提交信息读取与悬浮卡 ---------- */
+
+/* 「创建提交」列只登记 7 位短 hash；提交时间与信息原文由本地服务器的 /__commit 接口
+   经本仓库 git 实时读取。commitCache：hash → { time, msg }（已取到）或 null（仓库中不存在）。
+   数据加载后批量预取（按 100 个 hash 一段分批请求），展开与悬浮即取即用 */
+let commitCache = new Map(), gitState = 'unknown';
+const collectCommitHashes = () => [...new Set(data.tests.map(r => r.commit).filter(Boolean))];
+
+async function fetchCommits(tokens){
+  if (gitState === 'unavailable') return;
+  const todo = [...new Set(tokens)].filter(h => h && !commitCache.has(h));
+  let added = false;
+  for (let i = 0; i < todo.length; i += 100) {
+    let res;
+    try { res = await fetch('/__commit?h=' + todo.slice(i, i + 100).join(','), { cache: 'no-store' }); }
+    catch { gitState = 'unavailable'; return; }
+    // 404：普通静态服务器没有该接口；501：服务器侧 git 不可用——两者都降级为只显示 hash
+    if (!res.ok) { gitState = 'unavailable'; return; }
+    try {
+      const body = await res.json();
+      for (const [h, v] of Object.entries(body.commits || {})) {
+        commitCache.set(h, v && v.ok ? { time: v.time, msg: v.message || '' } : null);
+        added = true;
+      }
+    } catch { return; }
+    gitState = 'ok';
+  }
+  if (added) {
+    syncCommitTimes();
+    // 悬浮卡正开着时补上刚取到的信息
+    if (cardTrigger) showCommitCard(cardTrigger);
+  }
+}
+
+/* 预取晚于行展开时，给已渲染的提交属性补上时间 */
+function syncCommitTimes(){
+  document.querySelectorAll('.commit[data-hash]').forEach(t => {
+    if (t.querySelector('.ctime')) return;
+    const info = commitCache.get(t.dataset.hash);
+    if (info && info.time) t.insertAdjacentHTML('beforeend', `<span class="ctime">${esc(fmtTime(info.time))}</span>`);
+  });
+}
+
+/* 卡片挂在 body、事件委托到 document：列表会整体重渲染，触发元素被替换后卡片随渲染隐藏，
+   再次悬浮时重建，无需在渲染路径上单独维护 */
+const commitCard = el('<div id="commitCard" role="tooltip" hidden></div>');
+document.body.appendChild(commitCard);
+let cardTrigger = null;
+function hideCommitCard(){ cardTrigger = null; commitCard.hidden = true; }
+function showCommitCard(t){
+  const hash = t.dataset.hash, info = commitCache.get(hash);
+  const time = info ? fmtTime(info.time) : '';
+  let body = '';
+  if (info) body = info.msg ? `<div class="cc-body">${renderMd(info.msg)}</div>` : '';
+  else if (snapshotMode) body = `<div class="cc-body"><p class="cc-none">快照未包含该提交的信息</p></div>`;
+  else if (info === null) body = `<div class="cc-body"><p class="cc-none">当前仓库中找不到该提交</p></div>`;
+  else if (gitState === 'unavailable') body = `<div class="cc-body"><p class="cc-none">无法自动读取提交信息：请通过 TEST-GOVERNANCE.bat 或 view.py 启动视图</p></div>`;
+  else body = `<div class="cc-body"><p class="cc-none">正在读取提交信息…</p></div>`;
+  commitCard.innerHTML = `<div class="cc-head"><code>${esc(hash)}</code>${time ? `<span class="ctime">${esc(time)}</span>` : ''}</div>${body}`;
+  commitCard.hidden = false;
+  const r = t.getBoundingClientRect(), w = commitCard.offsetWidth, h = commitCard.offsetHeight;
+  let top = r.bottom + 6;
+  if (top + h > innerHeight - 8) top = Math.max(8, r.top - h - 6);
+  commitCard.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px';
+  commitCard.style.top = top + 'px';
+}
+document.addEventListener('mouseover', e => {
+  const t = e.target.closest('.commit[data-hash]');
+  if (!t || t === cardTrigger) return;
+  cardTrigger = t; showCommitCard(t);
+});
+document.addEventListener('mouseout', e => {
+  if (!cardTrigger) return;
+  // 在触发元素内部子元素间移动不算离开；真正移出时收起
+  if (e.relatedTarget && e.relatedTarget.closest('.commit[data-hash]') === cardTrigger) return;
+  if (e.target.closest('.commit[data-hash]')) hideCommitCard();
+});
+// 固定定位的卡片不随内容滚动，滚动即收起；capture 捕获内层滚动容器
+document.addEventListener('scroll', hideCommitCard, true);
+
 /* ---------- 数据拉取（实时模式） ---------- */
 
 async function fetchFiles(){
@@ -1059,6 +1222,7 @@ async function fetchRun(){
 }
 
 function renderAll(){
+  hideCommitCard();
   renderNav();
   if (view === 'overview') renderOverview();
   else if (view === 'beh' || view === 'test') renderList(view);
@@ -1082,14 +1246,19 @@ async function refresh(){
   }
   notice.hidden = !msg;
   notice.textContent = msg;
+  void fetchCommits(collectCommitHashes());
 }
 
 /* ---------- 快照导出 ---------- */
 
-function buildSnapshotHtml(){
+async function buildSnapshotHtml(){
+  // 内嵌前尽量读全引用提交的信息，离线快照才有完整悬浮卡；无读取接口或 hash 不存在的随快照降级
+  await fetchCommits(collectCommitHashes());
   const payload = JSON.stringify({
     savedAt: new Date().toISOString(),
-    // 运行结果是视图从报告文件动态合并的派生数据，不属于治理清单，不入快照
+    // 运行结果是视图从报告文件动态合并的派生数据，不属于治理清单，不入快照；
+    // 提交信息是视图实时读取的数据，已取到的部分随快照内嵌供离线查看
+    commits: Object.fromEntries([...commitCache].filter(([, v]) => v)),
     behaviors: data.behaviors.map(({ run, ...b }) => b),
     tests: data.tests.map(({ run, runCases, ...t }) => t),
   }).replace(/<\//g, '<\\/'); // JSON 内嵌进 <script> 前转义闭合序列
@@ -1108,8 +1277,8 @@ function buildSnapshotHtml(){
   return '<!doctype html>\n' + doc.outerHTML;
 }
 
-function exportSnapshot(){
-  const blob = new Blob([buildSnapshotHtml()], { type: 'text/html' });
+async function exportSnapshot(){
+  const blob = new Blob([await buildSnapshotHtml()], { type: 'text/html' });
   const a = document.createElement('a');
   const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
   a.href = URL.createObjectURL(blob);
@@ -1121,6 +1290,7 @@ function exportSnapshot(){
 function enterSnapshot(snap){
   snapshotMode = true;
   data = derive(snap.behaviors || [], snap.tests || []);
+  commitCache = new Map(Object.entries(snap.commits || {}));
   document.getElementById('export').hidden = true;
   renderNav(); go('overview');
 }

@@ -54,8 +54,8 @@ description: 当用户要求盘点测试行为、审计测试覆盖、识别冗�
 
 1. 建立测试与行为之间的映射，首次建立时把本技能 `assets/TEST-DISPOSITION.template.md` 复制为项目根目录的 `TEST-DISPOSITION.md`，逐行填充：
 
-| ID | 测试 | 文件 | 行为 ID | 测试类型 | 处置 | 原因 | 替代测试 | 状态 |
-| ---- | ---- | ---- | ------- | -------- | ---- | ---- | -------- | ---- |
+| ID | 测试 | 文件 | 行为 ID | 测试类型 | 处置 | 原因 | 替代测试 | 创建提交 | 状态 |
+| ---- | ---- | ---- | ------- | -------- | ---- | ---- | -------- | -------- | ---- |
 
 字段定义：
 
@@ -67,6 +67,7 @@ description: 当用户要求盘点测试行为、审计测试覆盖、识别冗�
 - `处置`：`保留`、`合并`、`重写`、`删除` 或 `待确认`。
 - `原因`：说明具体原因，不能只写“冗余”或“过度测试”。
 - `替代测试`：删除或合并时填写能够继续覆盖该行为的测试；没有则填写 `—`。
+- `创建提交`：首次引入该测试的提交，写 7 位短 hash，定位规则见「提交关联」。
 - `状态`：`生效中` 当前仍然存在且有效；`已删除` 已被删除、不再存在于代码中，通常因为冗余、过度测试、过时或没有实际价值；`已取代` 不再是当前主要测试、职责已被另一个测试取代，通常意味着发生了测试重构、合并或测试层级调整。
 
 2. 按以下规则对每个测试给出处置建议。处置以测试保护的行为价值为依据，与测试当前是否通过无关：
@@ -85,9 +86,18 @@ description: 当用户要求盘点测试行为、审计测试覆盖、识别冗�
 
 完成标准：每个测试都有唯一的处置结论和具体原因；所有删除与合并都注明替代测试或覆盖缺口；待确认项已单独汇总。
 
+## 提交关联
+
+`TEST-DISPOSITION.md` 的 `创建提交` 列记录每个测试的首次引入来源；行为表不登记提交，需要追溯某个行为的落地提交时，查看固化它的测试的创建提交即可。治理视图在测试展开详情中展示提交，并通过本地 git 自动读取提交时间与提交信息悬浮显示：
+
+- 创建提交优先用本技能 `scripts/sync-commits.py [项目根目录]` 自动登记：脚本按测试名与文件路径用 git 定位首次引入提交，原位回填表中为 `—` 的单元格（已登记的行不动），并在报告中列出未登记的行与原因；建立两份表和阶段三更新表格后各运行一次。`--check` 不改文件，校验已登记的 hash 指向真实提交、且测试名确实出现在该提交的文件内容中，报告的告警需人工复核。
+- 脚本未能定位的测试，再按规则手工定位：提交整体新增测试文件时用 `git log --diff-filter=A --format=%h --follow -- <文件>`；测试后加进既有文件时用 `git log --reverse -S '<测试名>' --format=%h -- <文件>`，均取最早一条。
+- 单元格只写 7 位短 hash；仓库没有版本历史、测试尚未提交或定位不到时填 `—`，不臆测。提交时间与提交信息原文不写入文档，视图按 hash 从当前仓库实时读取，始终与提交本身一致。
+- 提交信息的自动读取依赖随视图提供的本地服务器（`TEST-GOVERNANCE.bat` 或 `scripts/view.py` 启动）；改用普通静态服务器时视图只能显示 hash，不影响两份表的维护。
+
 ## 可视化视图
 
-首次建立两份表时，把本技能 `assets/TEST-GOVERNANCE.html` 同名复制到项目根目录（项目已有则复用）；Windows 主机同时复制 `assets/TEST-GOVERNANCE.bat`，日常查看双击该文件即可自动启动本地服务器并打开浏览器。视图从同目录的 `BEHAVIORS.md` 与 `TEST-DISPOSITION.md` 实时读取，之后维护两份表无需改动这两个文件。视图还会尝试读取同目录的 `TEST-RUN.xml`（JUnit XML 格式的最近一次测试运行报告）。运行测试时按框架把报告写到该文件：pytest 加 `--junitxml=TEST-RUN.xml`，vitest 加 `--reporter=junit --outputFile=TEST-RUN.xml`，jest 使用 jest-junit reporter，go 使用 gotestsum 的 `--junitfile TEST-RUN.xml`。`TEST-RUN.xml` 是运行产物，首次建立两份表时把它加入项目 `.gitignore`。非 Windows 主机或需要自定义端口时，运行本技能 `scripts/view.py`（用法 `python view.py [项目根目录] [端口]`，自动打开浏览器）或任选静态服务器后访问 `/TEST-GOVERNANCE.html`。
+首次建立两份表时，把本技能 `assets/TEST-GOVERNANCE.html` 同名复制到项目根目录（项目已有则复用）；Windows 主机同时复制 `assets/TEST-GOVERNANCE.bat` 与 `assets/TEST-GOVERNANCE-server.py`，日常查看双击该文件即可自动启动本地服务器并打开浏览器。视图从同目录的 `BEHAVIORS.md` 与 `TEST-DISPOSITION.md` 实时读取，之后维护两份表无需改动这两个文件。视图还会尝试读取同目录的 `TEST-RUN.xml`（JUnit XML 格式的最近一次测试运行报告）。运行测试时按框架把报告写到该文件：pytest 加 `--junitxml=TEST-RUN.xml`，vitest 加 `--reporter=junit --outputFile=TEST-RUN.xml`，jest 使用 jest-junit reporter，go 使用 gotestsum 的 `--junitfile TEST-RUN.xml`。`TEST-RUN.xml` 是运行产物，首次建立两份表时把它加入项目 `.gitignore`。非 Windows 主机或需要自定义端口时，运行本技能 `scripts/view.py`（用法 `python view.py [项目根目录] [端口]`，自动打开浏览器，另支持 `--no-open` 与 `--exit-busy` 参数）或任选静态服务器后访问 `/TEST-GOVERNANCE.html`；提交信息按 hash 的自动读取由 `view.py` / `TEST-GOVERNANCE-server.py` 提供接口，改用普通静态服务器时视图中只显示 hash。
 
 ## 交付与确认
 
