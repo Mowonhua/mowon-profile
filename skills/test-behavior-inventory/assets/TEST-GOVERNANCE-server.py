@@ -68,12 +68,13 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
             commits = dict(zip(tokens, pool.map(self.read_commit, tokens)))
         self.send_json(200, {'commits': commits})
 
-    @staticmethod
-    def read_commit(token):
+    def read_commit(self, token):
         try:
+            # cwd 取文档目录：服务器可能从别的工作目录启动（如 python view.py <项目根目录>），
+            # 用进程 cwd 会查到别的仓库，页面便只剩 hash
             proc = subprocess.run(
                 ['git', 'show', '-s', '--no-notes', f'--format={GIT_FORMAT}', token],
-                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=10)
+                cwd=self.directory, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=10)
         except (OSError, subprocess.TimeoutExpired):
             return {'ok': False}
         if proc.returncode != 0:
