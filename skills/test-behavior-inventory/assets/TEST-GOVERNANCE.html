@@ -286,6 +286,8 @@ html[data-density=comfortable] .ctext.end .ctext-in{-webkit-mask-image:none;mask
 .pill[data-p="失败"]{--pc:var(--p-red);font-weight:600}
 .pill[data-p="跳过"]{--pc:var(--p-amber)}
 .pill[data-p="未运行"]{--pc:var(--p-slate)}
+/* 提交 hash 复用 pill 外观，色相沿用原 hash 的 accent（--p-teal）；hash 固定等宽 */
+.pill[data-p="commit"]{--pc:var(--p-teal);font-family:var(--font-mono)}
 .more{display:block;width:100%;margin-top:var(--sp-4);background:transparent;border:1px dashed var(--rule-strong);
   color:var(--ink-2);padding:var(--sp-3);font:inherit;font-size:var(--step--1);cursor:pointer;
   border-radius:var(--r-md);transition:var(--dur) var(--ease)}
@@ -362,9 +364,10 @@ html[data-density=comfortable] .ctext.end .ctext-in{-webkit-mask-image:none;mask
 /* 触发元素只显式展示短 hash 与提交时间，完整信息悬浮展示；卡片 pointer-events:none
    不拦截鼠标，避免卡片盖住触发元素后隐现抖动 */
 .commit{cursor:help;white-space:nowrap}
-.commit code{color:var(--accent);font-weight:600}
-.commit:hover code{color:var(--accent-2);text-decoration:underline dotted;text-underline-offset:2px}
-.commit .ctime{color:var(--ink-3)}
+/* 悬浮提示改为 pill 底色与描边加深，与全局 pill 的静态外观保持一致 */
+.commit:hover .pill{background:color-mix(in srgb,var(--pc) 22%,var(--surface));border-color:var(--pc)}
+/* 展开详情内的时间统一为弱化等宽文本：提交时间与运行时间共用 */
+.mtime{font-family:var(--font-mono);color:var(--ink-3)}
 #commitCard{position:fixed;z-index:var(--z-top);width:max-content;max-width:min(34rem,calc(100vw - 2rem));
   background:var(--surface);border:1px solid var(--rule-strong);border-radius:var(--r-md);
   box-shadow:var(--shadow);padding:var(--sp-3) var(--sp-4);pointer-events:none;
@@ -717,7 +720,7 @@ const commitMeta = r => {
   if (!r.commit) return '—';
   const info = commitCache.get(r.commit);
   const time = info ? fmtTime(info.time) : '';
-  return `<span class="commit" data-hash="${esc(r.commit)}"><code>${esc(r.commit)}</code>${time ? `<span class="ctime">${esc(time)}</span>` : ''}</span>`;
+  return `<span class="commit" data-hash="${esc(r.commit)}"><span class="pill" data-p="commit">${esc(r.commit)}</span>${time ? `<code class="mtime">${esc(time)}</code>` : ''}</span>`;
 };
 
 /* ---------- 主题 / 密度 ---------- */
@@ -1027,7 +1030,7 @@ function testDetail(id){
     ? (altIds.map(x => `<span class="jump ${idRunCls(x)}" data-jump="${x}">${x}</span>`).join(' ') || esc(r.alt))
     : '—';
   const runHtml = r.run
-    ? `<span class="pill" data-p="${esc(r.run)}">${esc(r.run)}</span>${data.run.time ? ` <code>${esc(data.run.time)}</code>` : ''}`
+    ? `<span class="pill" data-p="${esc(r.run)}">${esc(r.run)}</span>${data.run.time ? ` <code class="mtime">${esc(data.run.time)}</code>` : ''}`
     : '—';
   return `<div class="detail"><div class="detail-in"><h4>处置原因</h4><div class="card-l${r.disposition === '待确认' || r.disposition === '删除' ? ' crit' : ''}">${esc(r.reason) || '—'}</div>
     <h4>固化的行为</h4>${beh}
@@ -1160,9 +1163,9 @@ async function fetchCommits(tokens){
 /* 预取晚于行展开时，给已渲染的提交属性补上时间 */
 function syncCommitTimes(){
   document.querySelectorAll('.commit[data-hash]').forEach(t => {
-    if (t.querySelector('.ctime')) return;
+    if (t.querySelector('.mtime')) return;
     const info = commitCache.get(t.dataset.hash);
-    if (info && info.time) t.insertAdjacentHTML('beforeend', `<span class="ctime">${esc(fmtTime(info.time))}</span>`);
+    if (info && info.time) t.insertAdjacentHTML('beforeend', `<code class="mtime">${esc(fmtTime(info.time))}</code>`);
   });
 }
 
