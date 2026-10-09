@@ -11,7 +11,7 @@
   并在存在 TEST-RUN.xml（JUnit XML 测试报告）时合并展示最近一次运行结果。
   TEST-DISPOSITION.md 的「创建提交」列只登记 7 位短 hash，提交时间与信息原文由本地服务器经 git 按 hash 实时读取，
   在悬浮卡中按 markdown 展示；普通静态服务器无读取接口，此时只显示 hash。
-   测试列表可按该提交时间排序（方向可切换），排序与筛选条件叠加生效，时间取不到的行排在已知时间之后。
+  测试列表可按该提交时间排序（方向可切换），排序与筛选条件叠加生效，时间取不到的行排在已知时间之后。
   浏览器的 file:// 限制禁止页面 fetch 本地文件，必须经 HTTP 访问：
     Windows：双击同目录的 TEST-GOVERNANCE.bat（启动本地服务器并打开本页）
     通用：python -m http.server 8765 后打开 http://127.0.0.1:8765/TEST-GOVERNANCE.html
@@ -666,7 +666,7 @@ const FILTER = {
 };
 /* 测试列表的排序选项：doc 为文档顺序（TEST-DISPOSITION.md 行序），其余按提交时间排列，
    取值只表示方向；提交时间取不到时（普通静态服务器、快照未内嵌）一律退回文档顺序 */
-const SORT_OPTS = [['doc', '文档顺序'], ['desc', '提交时间 新在前'], ['asc', '提交时间 旧在前']];
+const SORT_OPTS = [['doc', '文档顺序'], ['desc', '最新在前'], ['asc', '最早在前']];
 
 const $ = sel => document.querySelector(sel);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -870,8 +870,8 @@ function buildFilters(kind){
   } else {
     html += `<select data-k="file"><option value="__all">全部文件</option>${uniq(data.tests.map(r => r.file).filter(Boolean))
       .map(f => `<option value="${esc(f)}" ${cfg.file === f ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select>`;
-    html += `<select data-k="sort" aria-label="排序">${SORT_OPTS
-      .map(([v, l]) => `<option value="${v}" ${cfg.sort === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+    html += `<div class="seg" id="sortSeg" role="group" aria-label="排序">${SORT_OPTS
+      .map(([v, l]) => `<button data-sort="${v}" aria-pressed="${cfg.sort === v}">${l}</button>`).join('')}</div>`;
     html += chipRow(cfg.disp, 'disp', 'disposition', ['保留', '合并', '重写', '删除', '待确认'], data.tests);
     html += chipRow(cfg.type, 'type', 'type', uniq(data.tests.map(r => r.type).filter(Boolean)), data.tests);
     if (data.run.loaded) html += chipRow(cfg.run, 'run', 'run', ['通过', '失败', '跳过', '未运行'], data.tests, runCls);
@@ -883,6 +883,8 @@ function buildFilters(kind){
   host.onchange = e => { const k = e.target.dataset.k; if (!k) return; cfg[k] = e.target.value; pages[kind] = 0; renderList(kind); };
   host.oninput = e => { if (e.target.dataset.k === 'q') { cfg.q = e.target.value.toLowerCase(); pages[kind] = 0; renderList(kind); } };
   host.onclick = e => {
+    const sb = e.target.closest('#sortSeg button');
+    if (sb) { cfg.sort = sb.dataset.sort; syncSeg('sortSeg', 'sort', cfg.sort); pages[kind] = 0; renderList(kind); return; }
     const c = e.target.closest('.chip[data-set]');
     if (c) { const set = cfg[c.dataset.set]; if (!set) return;
       set.has(c.dataset.val) ? set.delete(c.dataset.val) : set.add(c.dataset.val);
