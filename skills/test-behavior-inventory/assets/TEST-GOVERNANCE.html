@@ -98,6 +98,8 @@ header{position:sticky;top:0;z-index:var(--z-header);background:var(--bg);
   font-size:var(--step--2);padding:5px 12px;border-radius:var(--r-md);cursor:pointer;
   transition:var(--dur) var(--ease)}
 .ghost:hover{color:var(--accent);border-color:var(--accent)}
+.ghost.icon{display:inline-flex;align-items:center;padding:7px 10px}
+.ghost.icon svg{width:1rem;height:1rem;display:block}
 .seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--rule);
   border-radius:var(--r-md);padding:2px}
 .seg button{border:0;background:transparent;color:var(--ink-3);font:inherit;font-size:var(--step--2);
@@ -665,8 +667,13 @@ const FILTER = {
   test: { file: '__all', disp: new Set(), type: new Set(), run: new Set(), sort: 'doc', q: '' },
 };
 /* 测试列表的排序选项：doc 为文档顺序（TEST-DISPOSITION.md 行序），其余按提交时间排列，
-   取值只表示方向；提交时间取不到时（普通静态服务器、快照未内嵌）一律退回文档顺序 */
-const SORT_OPTS = [['doc', '文档顺序'], ['desc', '最新在前'], ['asc', '最早在前']];
+   取值只表示方向；提交时间取不到时（普通静态服务器、快照未内嵌）一律退回文档顺序。
+   排序控件是单个图标按钮，点击按数组顺序循环切换，图标即当前状态 */
+const SORT_OPTS = [
+  ['doc', '文档顺序', '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'],
+  ['desc', '最新在前', '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 4.5h6M2.5 8h6M2.5 11.5h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M12.5 3.5v8.6M10.3 9.9l2.2 2.2 2.2-2.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'],
+  ['asc', '最早在前', '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 4.5h6M2.5 8h6M2.5 11.5h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M12.5 12.5V3.9M10.3 6.1l2.2-2.2 2.2 2.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'],
+];
 
 const $ = sel => document.querySelector(sel);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -870,8 +877,7 @@ function buildFilters(kind){
   } else {
     html += `<select data-k="file"><option value="__all">全部文件</option>${uniq(data.tests.map(r => r.file).filter(Boolean))
       .map(f => `<option value="${esc(f)}" ${cfg.file === f ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select>`;
-    html += `<div class="seg" id="sortSeg" role="group" aria-label="排序">${SORT_OPTS
-      .map(([v, l]) => `<button data-sort="${v}" aria-pressed="${cfg.sort === v}">${l}</button>`).join('')}</div>`;
+    html += `<button class="ghost icon" id="sortBtn" type="button"></button>`;
     html += chipRow(cfg.disp, 'disp', 'disposition', ['保留', '合并', '重写', '删除', '待确认'], data.tests);
     html += chipRow(cfg.type, 'type', 'type', uniq(data.tests.map(r => r.type).filter(Boolean)), data.tests);
     if (data.run.loaded) html += chipRow(cfg.run, 'run', 'run', ['通过', '失败', '跳过', '未运行'], data.tests, runCls);
@@ -880,11 +886,14 @@ function buildFilters(kind){
   html += `<span class="hint" id="${kind}Hint"></span>`;
   const host = document.getElementById(kind + 'Filters');
   host.innerHTML = html;
+  applySortButton(document.getElementById('sortBtn'));
   host.onchange = e => { const k = e.target.dataset.k; if (!k) return; cfg[k] = e.target.value; pages[kind] = 0; renderList(kind); };
   host.oninput = e => { if (e.target.dataset.k === 'q') { cfg.q = e.target.value.toLowerCase(); pages[kind] = 0; renderList(kind); } };
   host.onclick = e => {
-    const sb = e.target.closest('#sortSeg button');
-    if (sb) { cfg.sort = sb.dataset.sort; syncSeg('sortSeg', 'sort', cfg.sort); pages[kind] = 0; renderList(kind); return; }
+    const sb = e.target.closest('#sortBtn');
+    if (sb) { const i = SORT_OPTS.findIndex(o => o[0] === cfg.sort);
+      cfg.sort = SORT_OPTS[(i + 1) % SORT_OPTS.length][0];
+      applySortButton(sb); pages[kind] = 0; renderList(kind); return; }
     const c = e.target.closest('.chip[data-set]');
     if (c) { const set = cfg[c.dataset.set]; if (!set) return;
       set.has(c.dataset.val) ? set.delete(c.dataset.val) : set.add(c.dataset.val);
@@ -912,6 +921,14 @@ const testMatch = r => { const c = FILTER.test;
     && (!c.q || (r.name + ' ' + r.reason + ' ' + r.file + ' ' + r.id + ' ' + r.bids.join(' ') + ' ' + r.commit).toLowerCase().includes(c.q)); };
 
 /* ---------- 排序 ---------- */
+
+/* 图标按钮显示当前排序状态：图标、tooltip 与 aria-label 同源，避免三者不一致 */
+function applySortButton(btn){
+  if (!btn) return;
+  const [value, label, icon] = SORT_OPTS.find(o => o[0] === FILTER.test.sort);
+  const tip = `${label}`;
+  btn.dataset.sort = value; btn.title = tip; btn.setAttribute('aria-label', tip); btn.innerHTML = icon;
+}
 
 /* 按提交时间重排测试行：时间来自 commitCache（由 /__commit 接口异步填充），未取到时间的行
    （仓库无该提交、无读取接口、快照未内嵌）无论方向都排在已知时间之后，并在各自分组内保持
