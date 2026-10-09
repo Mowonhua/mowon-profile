@@ -11,6 +11,7 @@
   并在存在 TEST-RUN.xml（JUnit XML 测试报告）时合并展示最近一次运行结果。
   TEST-DISPOSITION.md 的「创建提交」列只登记 7 位短 hash，提交时间与信息原文由本地服务器经 git 按 hash 实时读取，
   在悬浮卡中按 markdown 展示；普通静态服务器无读取接口，此时只显示 hash。
+   测试列表可按该提交时间排序（方向可切换），排序与筛选条件叠加生效，时间取不到的行排在已知时间之后。
   浏览器的 file:// 限制禁止页面 fetch 本地文件，必须经 HTTP 访问：
     Windows：双击同目录的 TEST-GOVERNANCE.bat（启动本地服务器并打开本页）
     通用：python -m http.server 8765 后打开 http://127.0.0.1:8765/TEST-GOVERNANCE.html
@@ -661,8 +662,11 @@ const expanded = new Set();
 const pages = { beh: 0, test: 0 };
 const FILTER = {
   beh: { module: '__all', layer: new Set(), imp: new Set(), stab: new Set(), st: new Set(), dup: false, q: '' },
-  test: { file: '__all', disp: new Set(), type: new Set(), run: new Set(), q: '' },
+  test: { file: '__all', disp: new Set(), type: new Set(), run: new Set(), sort: 'doc', q: '' },
 };
+/* 测试列表的排序选项：doc 为文档顺序（TEST-DISPOSITION.md 行序），其余按提交时间排列，
+   取值只表示方向；提交时间取不到时（普通静态服务器、快照未内嵌）一律退回文档顺序 */
+const SORT_OPTS = [['doc', '文档顺序'], ['desc', '提交时间 新在前'], ['asc', '提交时间 旧在前']];
 
 const $ = sel => document.querySelector(sel);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -866,6 +870,8 @@ function buildFilters(kind){
   } else {
     html += `<select data-k="file"><option value="__all">全部文件</option>${uniq(data.tests.map(r => r.file).filter(Boolean))
       .map(f => `<option value="${esc(f)}" ${cfg.file === f ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select>`;
+    html += `<select data-k="sort" aria-label="排序">${SORT_OPTS
+      .map(([v, l]) => `<option value="${v}" ${cfg.sort === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
     html += chipRow(cfg.disp, 'disp', 'disposition', ['保留', '合并', '重写', '删除', '待确认'], data.tests);
     html += chipRow(cfg.type, 'type', 'type', uniq(data.tests.map(r => r.type).filter(Boolean)), data.tests);
     if (data.run.loaded) html += chipRow(cfg.run, 'run', 'run', ['通过', '失败', '跳过', '未运行'], data.tests, runCls);
@@ -903,10 +909,27 @@ const testMatch = r => { const c = FILTER.test;
     && (!c.run.size || (r.run && c.run.has(r.run)))
     && (!c.q || (r.name + ' ' + r.reason + ' ' + r.file + ' ' + r.id + ' ' + r.bids.join(' ') + ' ' + r.commit).toLowerCase().includes(c.q)); };
 
+/* ---------- 排序 ---------- */
+
+/* 按提交时间重排测试行：时间来自 commitCache（由 /__commit 接口异步填充），未取到时间的行
+   （仓库无该提交、无读取接口、快照未内嵌）无论方向都排在已知时间之后，并在各自分组内保持
+   文档顺序，避免时间缺失的行在切换方向时相对位置抖动。 */
+function sortByCommit(rows){
+  const mode = FILTER.test.sort;
+  if (mode !== 'desc' && mode !== 'asc') return rows;
+  const dir = mode === 'desc' ? -1 : 1;
+  const at = r => { const info = commitCache.get(r.commit); const t = info && info.time ? Date.parse(info.time) : NaN;
+    return Number.isNaN(t) ? null : t; };
+  return rows.map((r, i) => ({ r, i, t: at(r) })).sort((a, b) => {
+    if (a.t === null || b.t === null) return a.t === b.t ? a.i - b.i : (a.t === null ? 1 : -1);
+    return (a.t - b.t) * dir || a.i - b.i;
+  }).map(x => x.r);
+}
+
 /* ---------- 列表 ---------- */
 
 function renderList(kind){
-  const all = kind === 'beh' ? data.behaviors.filter(behMatch) : data.tests.filter(testMatch);
+  const all = kind === 'beh' ? data.behaviors.filter(behMatch) : sortByCommit(data.tests.filter(testMatch));
   document.getElementById(kind + 'Hint').textContent = `${all.length} / ${kind === 'beh' ? data.behaviors.length : data.tests.length}`;
   const shown = all.slice(0, (pages[kind] + 1) * PAGE);
   const host = document.getElementById(kind + 'List');
@@ -1069,7 +1092,7 @@ function jumpTo(id){
   const kind = kindOf(id);
   clearFilters(kind);
   go(kind);
-  const all = kind === 'beh' ? data.behaviors.filter(behMatch) : data.tests.filter(testMatch);
+  const all = kind === 'beh' ? data.behaviors.filter(behMatch) : sortByCommit(data.tests.filter(testMatch));
   const idx = all.findIndex(r => r.id === id);
   if (idx < 0) return;
   pages[kind] = Math.floor(idx / PAGE);
@@ -1155,8 +1178,10 @@ async function fetchCommits(tokens){
   }
   if (added) {
     syncCommitTimes();
+    // 按提交时间排序时，时间晚到会改变行序：重排列表（行节点被替换，悬浮卡随之收起）
+    if (FILTER.test.sort !== 'doc' && view === 'test') renderAll();
     // 悬浮卡正开着时补上刚取到的信息
-    if (cardTrigger) showCommitCard(cardTrigger);
+    else if (cardTrigger) showCommitCard(cardTrigger);
   }
 }
 
