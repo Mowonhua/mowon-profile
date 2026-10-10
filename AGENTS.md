@@ -19,4 +19,5 @@
 
 - 内容一律使用简体中文撰写，技术标识保留英文；`description` 可使用英文以提升跨模型触发稳定性。
 - 新增或修改 skill 时，参照既有 skill 的目录结构保持一致；不引入仓库内其他 skill 之外的依赖。
+- 新增skill时，向用户询问是否需要配置skill模型不可见，并依据答复配置openai.yaml的policy。
 - 本仓库无构建与测试，验证方式为检查目录名与 `name` 一致、frontmatter 完整。
