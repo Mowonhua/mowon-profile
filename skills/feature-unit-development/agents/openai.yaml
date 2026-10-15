@@ -1,0 +1,4 @@
+interface:
+  display_name: "功能单元驱动开发"
+  short_description: "将功能单元、行为场景、测试节点与实现符号统一维护在 features/*.md"
+  default_prompt: "使用 $feature-unit-development 按功能单元驱动开发流程分析并实现当前需求，同步维护 features/*.md 中的规格、追踪引用与验证结论。"
