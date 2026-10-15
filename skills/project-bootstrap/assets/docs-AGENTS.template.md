@@ -21,7 +21,7 @@
 | `.scratch/issues/<feature-slug>/spec.md` | 本地工作规格、范围与验收 | 已交付行为的长期参照 |
 | `.scratch/issues/<feature-slug>/issues/<NN>-<task-slug>.md` | 本地实现步骤、依赖与执行进度 | 长期领域定义 |
 | `docs/specs/spec-<feature-slug>.md` | 需随源码交付的长期目标与验收，按需创建 | 日常执行日志 |
-| [决策记录](../.agents/notes/AGENTS.md) | 有长期价值的取舍理由 | 其他文档已完整保存的事实 |
+| [决策记录](../.agents/notes/AGENTS.md) | 有长期价值的取舍理由 | 其他文档已完整保存的事实，并且无单独记录变更的价值 |
 | `.scratch/` | 本地实验、日志、截图与临时材料 | 需随源码交付的权威资料 |
 
 代码与配置是实现事实的来源。参照文档定义当前契约。发现二者不一致时，核对当前指令与验证证据，说明差异后修正拥有者。
