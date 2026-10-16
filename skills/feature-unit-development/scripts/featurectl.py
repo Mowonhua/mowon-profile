@@ -47,6 +47,10 @@ class Feature:
     relations: List[Tuple[str, str]] = field(default_factory=list)
     implementations: List[Tuple[str, str]] = field(default_factory=list)
     scenarios: List[Scenario] = field(default_factory=list)
+    # 模块取自文档一级标题；状态沿用功能标题后缀。创建提交由作者在实现提交后登记。
+    module: str = ""
+    status: str = "有效"
+    created_commit: str = ""
 
 
 @dataclass
@@ -168,6 +172,7 @@ def parse_sections(lines: List[str], first: int, last: int, feat: Feature, issue
     cur_start = None
     sections: List[Tuple[str, int, int]] = []
     prologue = []
+    commit_seen = False
     for i in range(first + 1, last):
         line = lines[i]
         m = HEADING.match(line)
@@ -176,7 +181,17 @@ def parse_sections(lines: List[str], first: int, last: int, feat: Feature, issue
                 sections.append((cur_name, cur_start, i))
             cur_name, cur_start = m.group(2).strip(), i + 1
         elif cur_name is None and line.strip() and not line.startswith(">") and not line.startswith("<!--"):
-            prologue.append(line.strip())
+            if line.strip().startswith("创建提交："):
+                value = clean_cell(line.strip().split("：", 1)[1])
+                if commit_seen:
+                    issues.append(Issue("error", f"{feat.document}:{i+1}", "创建提交重复登记"))
+                commit_seen = True
+                if value not in ("", "-") and not re.fullmatch(r"[0-9a-fA-F]{7,40}", value):
+                    issues.append(Issue("error", f"{feat.document}:{i+1}", "创建提交应为 7 到 40 位十六进制 hash；未登记时填 -"))
+                else:
+                    feat.created_commit = "" if value in ("", "-") else value.lower()
+            else:
+                prologue.append(line.strip())
     if cur_name is not None and cur_start is not None:
         sections.append((cur_name, cur_start, last))
     feat.description = " ".join(prologue).strip()
@@ -247,6 +262,9 @@ def scan(project: Path) -> Tuple[List[Feature], List[Issue]]:
         except (OSError, UnicodeError) as exc:
             issues.append(Issue("error", relative, f"无法读取文件：{exc}"))
             continue
+        # 删除线只影响标题显示，废弃功能仍须保留 ID 和状态供视图定位。
+        lines = [line.replace("~~", "") if line.startswith(("## ", "~~## ")) else line for line in lines]
+        module = next((line[2:].strip() for line in lines if line.startswith("# ")), doc.stem)
         blocks = []
         for i, line in enumerate(lines):
             m = HEADING_F.match(line)
@@ -262,6 +280,11 @@ def scan(project: Path) -> Tuple[List[Feature], List[Issue]]:
                     end = i
                     break
             feat = Feature(fid, name, relative, start + 1)
+            feat.module = module
+            status = re.search(r"\s+(草案|有效|已废弃)(?:[（(].*)?$", name)
+            if status:
+                feat.status = status.group(1)
+                feat.name = name[:status.start()].strip()
             parse_sections(lines, start, end, feat, issues)
             features.append(feat)
     return features, issues
@@ -342,6 +365,10 @@ def validate(project: Path, features: List[Feature], parse_issues: List[Issue],
         if feature.fid in first_defs:
             issues.append(Issue("error", f"{feature.document}:{feature.line}", f"重复功能 ID {feature.fid}，首次定义：{first_defs[feature.fid]}"))
         first_defs.setdefault(feature.fid, f"{feature.document}:{feature.line}")
+        if feature.status == "已废弃":
+            if feature.implementations or feature.relations or any(s.tests for s in feature.scenarios):
+                issues.append(Issue("error", f"{feature.document}:{feature.line}", "已废弃功能应清空实现、功能关系和测试引用"))
+            continue
         seen_rel = set()
         for kind, target in feature.relations:
             if (kind, target) in seen_rel:
@@ -351,6 +378,8 @@ def validate(project: Path, features: List[Feature], parse_issues: List[Issue],
                 issues.append(Issue("error", f"{feature.document}:{feature.line}", "功能不能依赖或触发自己"))
             if F_RE.fullmatch(target) and target not in all_ids:
                 issues.append(Issue("error", f"{feature.document}:{feature.line}", f"关系目标未定义：{target}"))
+            elif any(f.fid == target and f.status == "已废弃" for f in features):
+                issues.append(Issue("error", f"{feature.document}:{feature.line}", f"关系目标已废弃：{target}"))
         if not feature.implementations:
             issues.append(Issue("warning", f"{feature.document}:{feature.line}", "未指定实现位置（草案/未实现可以接受）"))
         for role, ref in feature.implementations:
@@ -377,7 +406,13 @@ def to_index(features: List[Feature]):
         for kind, target in f.relations:
             relations.append({"source": f.fid, "type": kind, "target": target})
     return {
-        "features": [{"id": f.fid, "name": f.name, "document": f.document, "line": f.line} for f in features],
+        "features": [{
+            "id": f.fid, "name": f.name, "document": f.document, "line": f.line,
+            "module": f.module, "status": f.status, "description": f.description,
+            "created_commit": f.created_commit,
+            "implementations": [{"role": role, "symbol": ref} for role, ref in f.implementations],
+            "scenarios": [{"id": s.sid, "type": s.kind, "expected": s.expected, "tests": s.tests} for s in f.scenarios],
+        } for f in features],
         "implementations": dict(sorted(by_impl.items())),
         "tests": dict(sorted(by_test.items())),
         "relations": relations,
@@ -385,6 +420,8 @@ def to_index(features: List[Feature]):
 
 
 def coverage(features: List[Feature]) -> dict:
+    # 统计当前功能；废弃条目保留在索引中，但不构成当前验证缺口。
+    features = [f for f in features if f.status != "已废弃"]
     total = sum(len(f.scenarios) for f in features)
     linked = sum(bool(s.tests) for f in features for s in f.scenarios)
     return {

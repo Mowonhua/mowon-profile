@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="paper" data-density="comfortable">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>功能视图</title>
+<link rel="icon" href="data:,">
+<style>
+:root{
+  --muted:var(--ink-3);
+  color-scheme:light;
+  --font-display:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,
+                 "Songti SC","Noto Serif CJK SC","Source Han Serif SC",SimSun,serif;
+  --font-ui:"Segoe UI Variable Text","Segoe UI",-apple-system,"PingFang SC","Microsoft YaHei",
+            "Noto Sans CJK SC",system-ui,sans-serif;
+  --font-mono:"Cascadia Mono","JetBrains Mono","SF Mono",Consolas,"Liberation Mono",monospace;
+  --step--2:.72rem; --step--1:.82rem; --step-0:.9rem; --step-1:1rem;
+  --step-2:1.25rem; --step-3:1.6rem;
+  --sp-1:.25rem; --sp-2:.5rem; --sp-3:.75rem; --sp-4:1rem; --sp-5:1.5rem;
+  --sp-6:2rem; --sp-7:3rem;
+  --r-lg:6px; --r-md:4px; --r-sm:2px;
+  --z-header:30; --z-overlay:40; --z-top:50;
+  --measure:68ch; --ease:cubic-bezier(.22,.61,.36,1); --dur:220ms;
+}
+html[data-theme="paper"]{
+  --bg:#f5f3ef; --bg-deep:#efece6; --surface:#fffdf9; --surface-2:#f3f0ea; --surface-3:#e7e3da;
+  --ink:#211f1b; --ink-2:#4a463f; --ink-3:#7a746a; --ink-4:#a09889;
+  --rule:#dfd9cf; --rule-strong:#c9c2b5;
+  --accent:#17605a; --accent-2:#0f4a45; --accent-soft:#e3ece9; --accent-ink:#f7faf9;
+  --risk:#a3542f; --risk-soft:#f4e7de;
+  --p-red:#b42318; --p-orange:#b93815; --p-amber:#a15c07; --p-green:#067647;
+  --p-teal:#17605a; --p-blue:#175cd3; --p-indigo:#3538cd; --p-violet:#6938ef;
+  --p-magenta:#c11574; --p-slate:#475467; --p-brown:#a3542f;
+  --shadow:0 1px 2px rgba(33,31,27,.05), 0 10px 26px -14px rgba(33,31,27,.16);
+  --grain:.035;
+}
+html[data-theme="ink"]{
+  color-scheme:dark;
+  --bg:#141412; --bg-deep:#101010; --surface:#1c1c1a; --surface-2:#232320; --surface-3:#2e2e29;
+  --ink:#ecebe4; --ink-2:#bcb8ad; --ink-3:#8e8a80; --ink-4:#6a675f;
+  --rule:#2c2c27; --rule-strong:#3d3d36;
+  --accent:#5cb9ab; --accent-2:#8ad6c9; --accent-soft:#1d3330; --accent-ink:#0c1614;
+  --risk:#e0a077; --risk-soft:#2d231c;
+  --p-red:#f97066; --p-orange:#fdb022; --p-amber:#fdd07a; --p-green:#47cd89;
+  --p-teal:#5cb9ab; --p-blue:#84caff; --p-indigo:#a4bcfd; --p-violet:#d6bbfb;
+  --p-magenta:#faa7e0; --p-slate:#94a3b8; --p-brown:#e0a077;
+  --shadow:0 1px 2px rgba(0,0,0,.45), 0 12px 30px -16px rgba(0,0,0,.8);
+  --grain:.05;
+}
+.grain{position:fixed;inset:0;z-index:var(--z-overlay);pointer-events:none;opacity:var(--grain);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.86' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track,::-webkit-scrollbar-corner{background:transparent}
+::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--ink-3) 45%,transparent);
+  border-radius:99px;border:2.5px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--ink-2) 75%,transparent);background-clip:content-box}
+html{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--ink-3) 45%,transparent) transparent;
+  /* 常驻保留滚动条槽位：页面高度跨过视口阈值时宽度不再跳变 */
+  scrollbar-gutter:stable}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:var(--step-0)/1.65 var(--font-ui);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+button,input,select{font:inherit;color:inherit}
+button,select{cursor:pointer}
+button{border:1px solid var(--rule);border-radius:4px;background:var(--surface);padding:6px 12px}
+button:hover{border-color:var(--accent);color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+h1,h2,h3,p{margin:0}h1,h2{font-family:var(--font-display);font-weight:600}
+h1{font-size:27px;line-height:1.2}h2{font-size:30px;line-height:1.4}h3{font-size:15px;font-weight:600}
+code,.mono{font-family:var(--font-mono);font-size:12px;overflow-wrap:anywhere}
+header{padding:24px 32px 20px;border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:24px}
+.brand{margin-right:auto}.project{font-size:12px;color:var(--muted);margin-top:5px}
+.actions{display:flex;gap:8px}.totals{display:flex;gap:22px;color:var(--muted);font-size:12px}
+.totals strong{display:block;font:24px/1.2 var(--font-display);color:var(--ink)}
+.workspace{display:grid;grid-template-columns:320px minmax(0,1fr);height:calc(100dvh - 105px)}
+aside{border-right:1px solid var(--rule);display:flex;flex-direction:column;min-height:0}
+.filters{padding:20px;display:grid;gap:10px;border-bottom:1px solid var(--rule)}
+input[type="search"],select{background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:8px 10px;width:100%;min-width:0}
+.filter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.gap-filter{display:flex;align-items:center;gap:6px;color:var(--ink-2);font-size:12px}
+input[type="checkbox"]{accent-color:var(--accent)}
+#feature-list{overflow:auto;padding:10px;flex:1;min-height:0}
+.feature-button{display:block;text-align:left;width:100%;padding:13px 14px;margin-bottom:5px;border-color:transparent;background:transparent}
+.feature-button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.feature-id{font:11px/1.5 var(--font-mono);color:var(--muted);display:block;margin-bottom:3px}
+.feature-title{font-weight:600;display:block}.feature-meta{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:11px;margin-top:6px}
+.list-count{padding:10px 20px;border-top:1px solid var(--rule);color:var(--muted);font-size:12px}
+main{overflow:auto;min-width:0;padding:30px 40px 60px}
+#detail{max-width:1080px;margin:auto}.eyebrow{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;margin-bottom:12px;flex-wrap:wrap}
+.badge{font:11px/1.5 var(--font-ui);padding:2px 7px;border:1px solid var(--rule);border-radius:3px;color:var(--ink-2)}
+.purpose{margin-top:14px;color:var(--ink-2);max-width:75ch;white-space:pre-wrap;overflow-wrap:anywhere}
+.source{margin-top:18px;color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+section{margin-top:30px;padding-top:22px;border-top:1px solid var(--rule)}
+.section-heading{display:flex;gap:10px;align-items:center;margin-bottom:14px}.count{font-size:12px;color:var(--muted)}
+.gap{color:var(--risk);font-size:12px}
+details{margin-top:20px}summary{cursor:pointer;color:var(--ink-2);font-size:13px}details[open]>summary{margin-bottom:12px}
+.empty{color:var(--muted);padding:45px 20px;text-align:center}.small-empty{color:var(--muted);font-size:12px}
+#notice{padding:12px 32px;background:var(--surface-2);color:var(--risk);border-bottom:1px solid var(--rule)}
+#notice[hidden]{display:none}body:has(#notice:not([hidden])) .workspace{height:calc(100dvh - 155px)}
+#issues{margin-top:25px;font-size:12px;color:var(--risk)}
+.view-switch{display:flex;border:1px solid var(--rule);border-radius:4px;overflow:hidden}
+.view-switch button{border:0;border-radius:0;background:transparent}
+.view-switch button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+body[data-view="table"] .workspace{display:flex;flex-direction:column}
+body[data-view="table"] aside{flex-shrink:0;border:0}
+body[data-view="table"] .filters{display:flex;align-items:center;flex-wrap:wrap;padding:18px 32px;gap:12px}
+body[data-view="table"] #search{width:min(340px,100%)}
+body[data-view="table"] .filter-row{display:flex}
+body[data-view="table"] select{width:145px}
+body[data-view="table"] #feature-list,body[data-view="table"] .list-count{display:none}
+body[data-view="table"] main{flex:1;min-height:0;padding:20px 32px;display:flex;flex-direction:column;overflow:hidden}
+#table-view{display:flex;flex:1;min-height:0;flex-direction:column}
+#table-view[hidden],#detail[hidden]{display:none}
+.table-scroll{overflow:auto;min-height:0;border:1px solid var(--rule);border-radius:4px;background:var(--surface);scrollbar-width:thin;scrollbar-color:var(--rule) transparent}
+.features-table{border-collapse:separate;border-spacing:0;width:100%;min-width:640px;text-align:left}
+.features-table th{position:sticky;top:0;z-index:1;background:var(--surface-2);font-weight:500;font-size:12px;color:var(--muted);white-space:nowrap;border-bottom:1px solid var(--rule);padding:12px}
+.features-table td{padding:16px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+.features-table tbody>tr:last-child>td{border-bottom:0}
+.features-table .numeric{text-align:right}
+.sort-button{border:0;background:transparent;padding:0;font:inherit;color:inherit;white-space:nowrap}
+.sort-button:hover{color:var(--accent)}
+.creation-cell{white-space:nowrap;font-size:12px;color:var(--muted)}
+.detail-table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+table.detail-table th{position:static;background:transparent;font-size:12px;font-weight:500;color:var(--muted);text-align:left;padding:12px;border-bottom:1px solid var(--rule)}
+.scenarios-table th:first-child{width:85px}.scenarios-table th:nth-child(2){width:75px}.scenarios-table th:last-child{width:42%}
+table.detail-table td{padding:13px 12px;overflow-wrap:anywhere;border-bottom:1px solid var(--rule);vertical-align:top}
+.detail-table tr:last-child td{border-bottom:0}
+.detail-table code{font-size:11px;display:block;margin-bottom:5px}
+.implementation-table th:first-child{width:160px}
+.relations-table th:first-child{width:100px}.relations-table th:nth-child(2){width:155px}
+.relation-table-link{border:0;background:transparent;padding:0;font-family:var(--font-mono);color:var(--accent)}
+.detail-table-wrap{overflow-x:auto;scrollbar-width:thin}
+#detail .detail-table{min-width:560px}
+.table-footer{padding:13px 0 0;color:var(--muted);font-size:12px;flex-shrink:0}
+@media(max-width:900px){.workspace{grid-template-columns:270px minmax(0,1fr)}main{padding:24px}.totals{gap:14px}}
+@media(max-width:900px){body[data-view="table"] main{padding:16px 20px}.features-table th,.features-table td{padding:12px 8px}.scenarios-table th:last-child{width:35%}}
+@media(max-width:640px){header{padding:18px;flex-wrap:wrap;gap:15px}.brand{flex:1}.totals{order:3;width:100%;justify-content:space-between}.totals strong{display:inline;font-size:20px;margin-right:6px}.workspace,body:has(#notice:not([hidden])) .workspace{display:block;height:auto}aside{border-right:0;border-bottom:1px solid var(--rule)}.filters{padding:15px 18px}#feature-list{max-height:235px;flex:auto;padding:8px 12px}main{padding:24px 18px;overflow:visible}.list-count{padding:7px 18px}h2{font-size:25px}#notice{padding:12px 18px}}
+@media(max-width:640px){.actions{gap:5px}.actions>button,.view-switch button{padding:5px 8px}body[data-view="table"] .filters{padding:15px 18px;gap:9px}body[data-view="table"] #search{width:100%}body[data-view="table"] .filter-row{width:100%}body[data-view="table"] select{width:50%}body[data-view="table"] main{padding:15px 18px;overflow:hidden}.table-scroll{max-height:65dvh}}
+/* 沿用原视图的纸面/墨色令牌、分段按钮、状态色与行内展开节奏。 */
+button,select,input,.feature-row{transition:background var(--dur) var(--ease),border-color var(--dur) var(--ease),color var(--dur) var(--ease),box-shadow var(--dur) var(--ease)}
+button{font-size:var(--step--2);border-radius:var(--r-md);border-color:var(--rule-strong)}
+input[type="search"],select{font-size:var(--step--1);border-color:var(--rule-strong);padding:7px 11px}
+.view-switch{padding:2px;background:var(--surface-2);border-color:var(--rule)}
+.view-switch button{border-radius:var(--r-sm);color:var(--ink-3);padding:4px 11px}
+.view-switch button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.table-scroll{border-radius:var(--r-lg);box-shadow:var(--shadow)}
+.features-table{min-width:800px;table-layout:fixed;font-size:var(--step--1)}
+.features-table>thead th{font-size:var(--step--2);padding:10px 12px;background:var(--bg-deep)}
+.features-table>thead th:nth-child(1){width:130px}
+.features-table>thead th:nth-child(2){width:130px}
+.features-table>thead th:nth-child(3){width:290px}
+.features-table>thead th:nth-child(4){width:70px}
+.features-table>thead th:nth-child(5){width:100px}
+.features-table>thead th:nth-child(6){width:80px}
+.feature-row{cursor:pointer}
+.feature-row:focus-visible{outline-offset:-2px}
+.feature-row>td{padding:12px;vertical-align:top;background:var(--bg)}
+.feature-row:hover>td,.feature-row.is-open>td{background:var(--surface)}
+.feature-row.is-open>td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.feature-row.is-retired>td{color:var(--ink-3)}
+.id-cell{font:var(--step--2)/1.8 var(--font-mono);color:var(--accent);font-weight:600;white-space:nowrap}
+.name-cell{font-family:var(--font-ui);font-size:var(--step--1);font-weight:600;color:var(--ink)}
+.description-cell{font-size:var(--step--1);line-height:1.6;overflow-wrap:anywhere}
+.module-cell{color:var(--ink-3)}
+.expanded-relations{margin-top:24px}
+.expanded-relations h3{margin:0 0 8px;font-size:var(--step--2);font-weight:600;color:var(--ink-3);letter-spacing:.07em}
+.expanded-relations h3 span{margin-left:6px;font-weight:400;color:var(--ink-4)}
+.relation-list{display:flex;flex-direction:column;gap:1px;max-width:76rem}
+.relation-list-row{display:grid;grid-template-columns:140px 95px minmax(0,1fr);gap:16px;align-items:baseline;width:100%;text-align:left;padding:5px 8px;border:0;border-radius:var(--r-sm);background:transparent}
+.relation-list-row:hover{background:var(--surface-2)}
+.relation-list-row .relation-id{font:600 var(--step--2)/1.5 var(--font-mono);color:var(--accent)}
+.relation-list-row .relation-name{font:var(--step--1)/1.55 var(--font-ui);color:var(--ink-2);overflow-wrap:anywhere}
+.relation-list-row .badge{justify-self:start}
+.badge{border-radius:var(--r-sm);background:var(--surface);border-color:var(--rule-strong);white-space:nowrap;--pc:var(--ink-2)}
+.badge[data-status]{background:color-mix(in srgb,var(--pc) 12%,var(--surface));border-color:color-mix(in srgb,var(--pc) 40%,var(--rule));color:var(--pc)}
+.badge[data-status="有效"]{--pc:var(--p-green)}
+.badge[data-status="草案"]{--pc:var(--p-amber)}
+.badge[data-status="已废弃"]{--pc:var(--p-slate)}
+.expanded-implementations{margin:20px 0 0;padding-top:16px;border-top:1px solid var(--rule)}
+.expanded-implementations h3,.expanded-scenarios-heading{font-size:var(--step--2);color:var(--ink-3);margin-bottom:10px}
+/* 文本输入和下拉框用现有边框表达焦点，避免叠加全局 outline。 */
+input:not([type="checkbox"]),select{box-shadow:none}
+input:not([type="checkbox"]):focus,input:not([type="checkbox"]):focus-visible,select:focus,select:focus-visible{outline:none;box-shadow:none;border-color:var(--accent)}
+.features-table .expanded-cell{padding:0!important;border:0!important;background:var(--bg-deep)}
+.expansion-panel{display:grid;grid-template-rows:minmax(0,0fr);opacity:0;transition:grid-template-rows 260ms var(--ease),opacity 180ms var(--ease)}
+.expansion-panel[data-open="true"]{grid-template-rows:minmax(0,1fr);opacity:1}
+.expansion-inner{min-height:0;overflow:hidden}
+.expansion-content{padding:24px 27px;border-left:3px solid var(--accent);border-bottom:1px solid var(--rule);transition:opacity 100ms var(--ease)}
+.expansion-panel[data-open="false"] .expansion-content{opacity:0}
+.feature-row.stagger{animation:rise 320ms var(--ease) both}
+.feature-row.flash>td:first-child{animation:flash 1.7s var(--ease)}
+@keyframes rise{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@keyframes flash{0%,50%{box-shadow:inset 3px 0 0 var(--accent),0 0 0 2px var(--accent)}100%{box-shadow:inset 3px 0 0 transparent,0 0 0 2px transparent}}
+html[data-density="compact"] .feature-row>td{padding:6px 12px}
+html[data-density="compact"] .description-cell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}html{scroll-behavior:auto}}
+@media(max-width:640px){.actions{flex-wrap:wrap}.brand{min-width:120px}.table-scroll{max-height:65dvh}}
+/* ------------------------------------------------------------------ 提交悬浮卡 */
+/* 触发元素只显式展示短 hash 与提交时间，完整信息悬浮展示；卡片 pointer-events:none
+   不拦截鼠标，避免卡片盖住触发元素后隐现抖动 */
+.commit{cursor:help;white-space:nowrap}
+/* 悬浮提示改为 pill 底色与描边加深，与全局 pill 的静态外观保持一致 */
+.commit:hover .pill{background:color-mix(in srgb,var(--pc) 22%,var(--surface));border-color:var(--pc)}
+/* 展开详情内的时间统一为弱化等宽文本：提交时间与运行时间共用 */
+.mtime{font-family:var(--font-mono);color:var(--ink-3)}
+#commitCard{position:fixed;z-index:var(--z-top);width:max-content;max-width:min(34rem,calc(100vw - 2rem));
+  background:var(--surface);border:1px solid var(--rule-strong);border-radius:var(--r-md);
+  box-shadow:var(--shadow);padding:var(--sp-3) var(--sp-4);pointer-events:none;
+  font-size:var(--step--2);line-height:1.7}
+#commitCard:not([hidden]){animation:rise 180ms var(--ease) both}
+#commitCard .cc-head{display:flex;gap:var(--sp-3);align-items:baseline;font-family:var(--font-mono);white-space:nowrap}
+#commitCard .cc-head code{color:var(--accent);font-weight:600}
+#commitCard .cc-head .ctime{color:var(--ink-3)}
+#commitCard .cc-body{margin-top:var(--sp-2);padding-top:var(--sp-2);border-top:1px solid var(--rule);
+  color:var(--ink-2);overflow-wrap:anywhere}
+#commitCard .cc-body p{margin:0}
+#commitCard .cc-body p+p,#commitCard .cc-body ul+p,#commitCard .cc-body ol+p{margin-top:var(--sp-2)}
+#commitCard .cc-body ul,#commitCard .cc-body ol{margin:var(--sp-1) 0 0;padding-left:1.25rem}
+#commitCard .cc-body li+li{margin-top:2px}
+#commitCard .cc-body h6{margin:var(--sp-2) 0 0;font-size:var(--step--1);font-weight:600;color:var(--ink)}
+#commitCard .cc-none{color:var(--ink-4)}
+
+.pill{display:inline-block;padding:1px 7px;border-radius:var(--r-sm);font-size:var(--step--2);border:1px solid var(--rule-strong);color:var(--ink-2);white-space:nowrap;background:var(--surface);--pc:var(--ink-2);font-weight:500}
+.pill[data-p]{background:color-mix(in srgb,var(--pc) 12%,var(--surface));border-color:color-mix(in srgb,var(--pc) 40%,var(--rule));color:var(--pc)}
+.pill[data-p="commit"]{--pc:var(--p-teal);font-family:var(--font-mono)}
+.commit{display:inline-flex;gap:6px;align-items:baseline}
+.creation-cell .mtime{font-size:var(--step--2)}
+</style>
+</head>
+<body data-view="table">
+<div class="grain" aria-hidden="true"></div>
+<header>
+  <div class="brand"><h1>功能视图</h1><div class="project" id="project">正在读取</div></div>
+  <div class="totals" id="totals" aria-label="当前功能统计"></div>
+  <div class="actions"><div class="view-switch" role="group" aria-label="视图"><button id="table-mode" type="button" aria-pressed="true">表格</button><button id="detail-mode" type="button" aria-pressed="false">详情</button></div><button id="density" type="button" aria-pressed="false">紧凑</button><button id="refresh" type="button">刷新</button><button id="theme" type="button" aria-label="切换明暗主题">深色</button></div>
+</header>
+<div id="notice" role="alert" hidden></div>
+<div class="workspace">
+<aside aria-label="功能筛选与列表">
+  <div class="filters">
+    <input id="search" type="search" placeholder="搜索功能、场景或符号" aria-label="搜索功能、场景或符号">
+    <div class="filter-row">
+      <select id="module" aria-label="筛选模块"><option value="">全部模块</option></select>
+      <select id="status" aria-label="筛选规格状态"><option value="">全部状态</option><option>有效</option><option>草案</option><option>已废弃</option></select>
+    </div>
+    <label class="gap-filter"><input type="checkbox" id="gaps">仅显示缺少测试引用的功能</label>
+  </div>
+  <nav id="feature-list" aria-label="功能列表"></nav>
+  <div class="list-count" id="list-count" aria-live="polite"></div>
+</aside>
+<main id="main" tabindex="-1"><div id="table-view"><div class="table-scroll"><table class="features-table"><caption class="sr-only">功能与当前测试关联</caption><thead id="table-head"></thead><tbody id="table-body"></tbody></table></div><div class="table-footer" id="table-count" aria-live="polite"></div></div><div id="detail" hidden><p class="empty">正在读取功能文档</p></div><details id="issues" hidden><summary>文档解析问题</summary><div></div></details></main>
+</div>
+<script>
+'use strict';
+// 功能文档文本用 textContent 输出；提交说明由 renderMd 转义后按受限 Markdown 展示。
+const $ = id => document.getElementById(id);
+function element(tag, className, text) {
+  const result = document.createElement(tag);
+  if (className) result.className = className;
+  if (text !== undefined) result.textContent = text;
+  if (className === 'badge' && ['有效', '草案', '已废弃'].includes(text)) result.dataset.status = text;
+  return result;
+}
+let snapshot = {features: [], relations: []};
+let selected = location.hash.slice(1);
+let lastPayload = '';
+let loading = false;
+const commitCache = new Map();
+const expandedFeatures = new Set();
+let sortKey = 'id';
+let sortDirection = 1;
+const hasGap = feature => feature.status !== '已废弃' && feature.scenarios.some(s => !s.tests.length);
+function setDensity(density) {
+  document.documentElement.dataset.density = density;
+  $('density').textContent = density === 'compact' ? '舒展' : '紧凑';
+  $('density').setAttribute('aria-pressed', String(density === 'compact'));
+  try { localStorage.setItem('feature-density', density); } catch (_) { /* 存储不可用时保留本次选择。 */ }
+}
+try { setDensity(localStorage.getItem('feature-density') || 'comfortable'); } catch (_) { setDensity('comfortable'); }
+$('density').addEventListener('click', () => setDensity(document.documentElement.dataset.density === 'compact' ? 'comfortable' : 'compact'));
+function setView(view) {
+  hideCommitCard();
+  document.body.dataset.view = view;
+  $('table-view').hidden = view !== 'table';
+  $('detail').hidden = view !== 'detail';
+  $('table-mode').setAttribute('aria-pressed', String(view === 'table'));
+  $('detail-mode').setAttribute('aria-pressed', String(view === 'detail'));
+}
+$('table-mode').addEventListener('click', () => setView('table'));
+$('detail-mode').addEventListener('click', () => { setView('detail'); render(); });
+function setTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  $('theme').textContent = theme === 'ink' ? '浅色' : '深色';
+  try { localStorage.setItem('feature-theme', theme); } catch (_) { /* 禁用存储时仍可切换主题。 */ }
+}
+try { setTheme(localStorage.getItem('feature-theme') || 'paper'); } catch (_) { setTheme('paper'); }
+$('theme').addEventListener('click', () => setTheme(document.documentElement.dataset.theme === 'ink' ? 'paper' : 'ink'));
+
+function selectFeature(id) {
+  selected = id;
+  setView('detail');
+  // 关系跳转可以跨越当前筛选范围；清空筛选，确保列表也能定位目标。
+  $('search').value = ''; $('module').value = ''; $('status').value = ''; $('gaps').checked = false;
+  render();
+  $('main').scrollTop = 0;
+  $('main').focus({preventScroll: true});
+}
+function render() {
+  hideCommitCard();
+  const query = $('search').value.trim().toLocaleLowerCase();
+  const filtered = snapshot.features.filter(feature =>
+    (!$('module').value || feature.module === $('module').value) &&
+    (!$('status').value || feature.status === $('status').value) &&
+    (!$('gaps').checked || hasGap(feature)) &&
+    (!query || JSON.stringify(feature).toLocaleLowerCase().includes(query)));
+  if (!filtered.some(feature => feature.id === selected)) selected = filtered[0]?.id || '';
+  history.replaceState(null, '', selected ? '#' + selected : location.pathname);
+  $('feature-list').replaceChildren(...filtered.map(feature => {
+    const button = element('button', 'feature-button');
+    button.type = 'button';
+    button.setAttribute('aria-pressed', String(feature.id === selected));
+    button.append(element('span', 'feature-id', feature.id), element('span', 'feature-title', feature.name));
+    const meta = element('span', 'feature-meta');
+    meta.append(element('span', '', feature.module), element('span', '', feature.status));
+    button.append(meta);
+    button.addEventListener('click', () => { selected = feature.id; render(); $('main').scrollTop = 0; });
+    return button;
+  }));
+  if (!filtered.length) $('feature-list').append(element('p', 'empty', snapshot.features.length ? '没有匹配的功能' : '暂无功能'));
+  $('list-count').textContent = `${filtered.length} / ${snapshot.features.length} 个功能`;
+  const feature = filtered.find(item => item.id === selected);
+  renderDetail(feature);
+  renderTable(filtered);
+}
+// 两种视图共用表格结构和空状态，避免同一场景或实现出现不同展示规则。
+function createDetailTable(className, headings, rows, emptyText) {
+  const table = element('table', 'detail-table ' + className);
+  const head = element('thead');const heading = element('tr');
+  for (const label of headings) { const th = element('th', '', label);th.scope = 'col';heading.append(th); }
+  head.append(heading);
+  const body = element('tbody');
+  if (rows.length) body.append(...rows);
+  else {
+    const row = element('tr');const cell = element('td', 'small-empty', emptyText);
+    cell.colSpan = headings.length;row.append(cell);body.append(row);
+  }
+  table.append(head, body);return table;
+}
+function scenarioTable(feature) {
+  const rows = feature.scenarios.map(scenario => {
+    const row = element('tr');const tests = element('td');
+    if (scenario.tests.length) tests.append(...scenario.tests.map(ref => element('code', '', ref)));
+    else tests.append(element('span', 'gap', feature.status === '已废弃' ? '已废弃' : '未关联测试'));
+    row.append(element('td', 'mono', scenario.id), element('td', '', scenario.type), element('td', '', scenario.expected), tests);
+    return row;
+  });
+  return createDetailTable('scenarios-table', ['场景', '类型', '场景与预期', '关联测试'], rows, '暂无行为场景');
+}
+function implementationTable(feature) {
+  const rows = feature.implementations.map(implementation => {
+    const row = element('tr');const symbol = element('td');symbol.append(element('code', '', implementation.symbol));
+    row.append(element('td', '', implementation.role), symbol);return row;
+  });
+  return createDetailTable('implementation-table', ['角色', '代码符号'], rows, '未登记实现位置');
+}
+function relatedFunctionsOf(feature) {
+  // 以目标功能分组；同一功能有多种直接关系时仍只占一行。
+  const related = new Map();
+  for (const relation of snapshot.relations.filter(r => r.source === feature.id || r.target === feature.id)) {
+    const incoming = relation.target === feature.id;
+    const target = incoming ? relation.source : relation.target;
+    const label = incoming ? (relation.type === '依赖' ? '被依赖' : '被触发') : relation.type;
+    if (!related.has(target)) related.set(target, new Set());
+    related.get(target).add(label);
+  }
+  return related;
+}
+function renderTable(features) {
+  hideCommitCard();
+  const columns = [['id', '编号'], ['name', '名称'], ['', '描述'], ['module', '模块'], ['', '创建提交'], ['status', '状态']];
+  const header = element('tr');
+  for (const [key, label] of columns) {
+    const th = element('th');
+    th.scope = 'col';
+    if (key) {
+      const button = element('button', 'sort-button', label + (sortKey === key ? (sortDirection === 1 ? ' ↑' : ' ↓') : ' ↕'));
+      button.type = 'button';
+      button.setAttribute('aria-label', '按' + label + '排序');
+      if (sortKey === key) th.setAttribute('aria-sort', sortDirection === 1 ? 'ascending' : 'descending');
+      button.addEventListener('click', () => { sortDirection = sortKey === key ? -sortDirection : 1; sortKey = key; renderTable(features); });
+      th.append(button);
+    } else { th.textContent = label; }
+    header.append(th);
+  }
+  $('table-head').replaceChildren(header);
+  const value = feature => feature[sortKey];
+  const ordered = [...features].sort((a, b) => {
+    const left = value(a), right = value(b);
+    const difference = typeof left === 'number' ? left - right : String(left).localeCompare(String(right), 'zh', {numeric:true});
+    return sortDirection * difference || a.id.localeCompare(b.id);
+  });
+  const rows = [];
+  for (const feature of ordered) {
+    const open = expandedFeatures.has(feature.id);
+    const row = element('tr', 'feature-row stagger' + (open ? ' is-open' : '') + (feature.status === '已废弃' ? ' is-retired' : ''));
+    row.style.animationDelay = `${Math.min(rows.length / 2, 40) * 8}ms`;
+    row.dataset.feature = feature.id;
+    row.tabIndex = 0;
+    row.setAttribute('aria-expanded', String(open));
+    row.setAttribute('aria-controls', `expansion-${feature.id}`);
+    const toggle = () => {
+      const next = !expandedFeatures.has(feature.id);
+      if (next) expandedFeatures.add(feature.id); else expandedFeatures.delete(feature.id);
+      // 保留原 DOM，让 CSS 从当前高度继续过渡；连续点击可直接反向播放。
+      row.classList.toggle('is-open', next);
+      row.setAttribute('aria-expanded', String(next));
+      panel.dataset.open = String(next);
+      panel.inert = !next;
+      panel.setAttribute('aria-hidden', String(!next));
+      selected = feature.id;
+      history.replaceState(null, '', '#' + selected);
+      renderDetail(feature);
+    };
+    row.addEventListener('click', event => {
+      // 行内关系和提交控件独立响应；复制文字不应触发展开切换。
+      if (event.target.closest('button,a,summary,details,input,select,textarea,.commit')) return;
+      const selection = window.getSelection();
+      if (selection?.toString() && row.contains(selection.anchorNode)) return;
+      toggle();
+    });
+    row.addEventListener('keydown', event => {
+      if (event.target === row && (event.key === 'Enter' || event.key === ' ')) {
+        event.preventDefault();toggle();
+      }
+    });
+    const name = element('td', 'name-cell', feature.name);
+    const description = element('td', 'description-cell', feature.description);
+    description.title = feature.description;
+    const status = element('td');
+    const statusBadge = element('span', 'badge', feature.status);statusBadge.dataset.status = feature.status;status.append(statusBadge);
+    const relations = element('div', 'expanded-relations');
+    const relatedFunctions = relatedFunctionsOf(feature);
+    const relationHeading = element('h3', '', '功能关系 ');
+    relationHeading.append(element('span', '', String(relatedFunctions.size)));relations.append(relationHeading);
+    const relationList = element('div', 'relation-list');
+    for (const [target, labels] of relatedFunctions) {
+      const related = snapshot.features.find(f => f.id === target);
+      const entry = element('button', 'relation-list-row');entry.type = 'button';entry.disabled = !related;
+      entry.addEventListener('click', () => {
+        // 表格中的关系在表格内定位；解除筛选，避免目标被筛选条件隐藏。
+        $('search').value = ''; $('module').value = ''; $('status').value = ''; $('gaps').checked = false;
+        selected = target;expandedFeatures.add(target);render();
+        const destination = $('table-body').querySelector(`[data-feature="${target}"]`);
+        destination.classList.remove('stagger');destination.classList.add('flash');
+        destination.scrollIntoView({block:'nearest', inline:'nearest', behavior:matchMedia('(prefers-reduced-motion:reduce)').matches ? 'instant' : 'smooth'});
+        destination.focus({preventScroll:true});
+      });
+      entry.append(element('span', 'relation-id', target), element('span', 'badge', [...labels].join('、')), element('span', 'relation-name', related?.name || '未定义的功能'));
+      relationList.append(entry);
+    }
+    relations.append(relationList);
+    if (!relatedFunctions.size) relations.append(element('p', 'small-empty', '无直接关系'));
+    const implementations = element('div', 'expanded-implementations');
+    implementations.append(element('h3', '', '实现位置'));
+    implementations.append(implementationTable(feature));
+    const commit = element('td', 'creation-cell');
+    if (feature.created_commit) commit.append(commitMeta(feature.created_commit, false));
+    else commit.textContent = '—';
+    row.append(element('td', 'id-cell', feature.id), name, description, element('td', 'module-cell', feature.module), commit, status);
+    rows.push(row);
+      const expansion = element('tr');
+      const cell = element('td', 'expanded-cell');cell.colSpan = columns.length;
+      const panel = element('div', 'expansion-panel');panel.dataset.open = String(open);panel.inert = !open;panel.setAttribute('aria-hidden', String(!open));
+      panel.id = `expansion-${feature.id}`;
+      const inner = element('div', 'expansion-inner');
+      const content = element('div', 'expansion-content');
+      content.append(element('h3', 'expanded-scenarios-heading', '行为场景'));
+      content.append(scenarioTable(feature));
+      content.append(implementations, relations);
+      inner.append(content);panel.append(inner);cell.append(panel);
+      expansion.append(cell);rows.push(expansion);
+  }
+  if (!rows.length) { const row = element('tr');const cell = element('td', 'empty', snapshot.features.length ? '没有匹配的功能' : '暂无功能文档');cell.colSpan = columns.length;row.append(cell);rows.push(row); }
+  $('table-body').replaceChildren(...rows);
+  $('table-count').textContent = `${features.length} / ${snapshot.features.length} 个功能`;
+}
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function fmtTime(s){
+  if (!s) return '';
+  const d = new Date(s);
+  if (isNaN(d)) return s.length > 19 ? s.slice(0, 19).replace('T', ' ') : s;
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/* 提交信息是受限 markdown：标题、有序/无序列表（按缩进嵌套，嵌套列表挂在上一层
+   尚未闭合的 <li> 内）与段落，行内支持 `code` 与 **加粗**；先整体转义再做行内替换，杜绝注入 */
+function renderMd(src){
+  const lines = String(src ?? '').replace(/\r\n?/g, '\n').split('\n');
+  const inline = s => esc(s)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  const out = [];
+  let list = [], para = []; // list 栈记录每层列表类型与其 <li> 是否尚未闭合
+  const flushPara = () => { if (para.length) { out.push(`<p>${para.map(inline).join('<br>')}</p>`); para = []; } };
+  const closeTo = depth => { while (list.length > depth) { const lv = list.pop();
+    if (lv.openLi) out.push('</li>'); out.push(`</${lv.tag}>`); } };
+  const openItem = () => { out.push('<li>'); list[list.length - 1].openLi = true; };
+  for (const raw of lines) {
+    const line = raw.replace(/\t/g, '  ');
+    const hm = line.match(/^#{1,6}\s+(.*)$/);
+    const lm = line.match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);
+    if (hm) { flushPara(); closeTo(0); out.push(`<h6>${inline(hm[1])}</h6>`); continue; }
+    if (lm) {
+      flushPara();
+      const depth = Math.floor(lm[1].length / 2), tag = /^[-*+]$/.test(lm[2]) ? 'ul' : 'ol';
+      if (depth > list.length - 1) { list.push({ tag, openLi: false }); out.push(`<${tag}>`); }
+      else if (depth < list.length - 1) {
+        closeTo(depth + 1);
+        const top = list[list.length - 1];
+        if (top.openLi) { out.push('</li>'); top.openLi = false; }
+        if (top.tag !== tag) { out.push(`</${top.tag}>`); out.push(`<${tag}>`); list[list.length - 1] = { tag, openLi: false }; }
+      } else {
+        const top = list[list.length - 1];
+        if (top.tag !== tag) { if (top.openLi) out.push('</li>'); out.push(`</${top.tag}>`); out.push(`<${tag}>`); list[list.length - 1] = { tag, openLi: false }; }
+        else if (top.openLi) out.push('</li>');
+      }
+      openItem();
+      out.push(inline(lm[3]));
+      continue;
+    }
+    if (!line.trim()) { flushPara(); closeTo(0); continue; }
+    para.push(line.trim());
+  }
+  flushPara(); closeTo(0);
+  return out.join('');
+}
+
+
+/* 沿用原视图的悬浮卡结构、定位和事件委托；仅将读取适配为按 hash 查询的接口。 */
+const commitRequests = new Map();
+const commitCard = element('div');
+commitCard.id = 'commitCard';commitCard.setAttribute('role', 'tooltip');commitCard.hidden = true;
+document.body.appendChild(commitCard);
+let cardTrigger = null;
+function commitMeta(hash, showTime = true) {
+  const trigger = element('span', 'commit');trigger.dataset.hash = hash;trigger.tabIndex = 0;
+  trigger.dataset.showTime = String(showTime);
+  trigger.setAttribute('aria-label', '提交 ' + hash.slice(0, 7));
+  const pill = element('span', 'pill', hash.slice(0, 7));pill.dataset.p = 'commit';trigger.append(pill);
+  const info = commitCache.get(hash);
+  if (showTime && info?.time) trigger.append(element('code', 'mtime', fmtTime(info.time)));
+  return trigger;
+}
+function syncCommitTimes() {
+  document.querySelectorAll('.commit[data-hash][data-show-time="true"]').forEach(trigger => {
+    const info = commitCache.get(trigger.dataset.hash);
+    if (info?.time && !trigger.querySelector('.mtime')) trigger.append(element('code', 'mtime', fmtTime(info.time)));
+  });
+}
+async function fetchCommit(hash) {
+  if (commitCache.has(hash)) return;
+  if (commitRequests.has(hash)) return commitRequests.get(hash);
+  const request = (async () => {
+    try {
+      const response = await fetch('/api/commit/' + encodeURIComponent(hash), {cache:'no-store'});
+      if (response.status === 404) commitCache.set(hash, null);
+      else if (!response.ok) commitCache.set(hash, {error:'无法读取提交信息'});
+      else commitCache.set(hash, await response.json());
+    } catch (_) { commitCache.set(hash, {error:'无法读取提交信息'}); }
+    syncCommitTimes();
+    if (cardTrigger?.dataset.hash === hash) showCommitCard(cardTrigger);
+  })();
+  commitRequests.set(hash, request);
+  try { await request; } finally { commitRequests.delete(hash); }
+}
+async function fetchCommits(hashes) {
+  // 同一个提交可对应多个功能；去重并限制并发，避免一次打开大量功能时启动过多 Git 查询。
+  const pending = [...new Set(hashes)].filter(hash => hash && !commitCache.has(hash));
+  for (let i = 0; i < pending.length; i += 4) await Promise.all(pending.slice(i, i + 4).map(fetchCommit));
+}
+function hideCommitCard() {
+  if (cardTrigger) cardTrigger.removeAttribute('aria-describedby');
+  cardTrigger = null;commitCard.hidden = true;
+}
+function showCommitCard(trigger) {
+  if (!trigger.isConnected) { hideCommitCard();return; }
+  if (cardTrigger && cardTrigger !== trigger) cardTrigger.removeAttribute('aria-describedby');
+  cardTrigger = trigger;trigger.setAttribute('aria-describedby', 'commitCard');
+  const hash = trigger.dataset.hash, info = commitCache.get(hash);
+  const time = info?.time ? fmtTime(info.time) : '';
+  let body = '';
+  if (info && !info.error) body = info.message ? `<div class="cc-body">${renderMd(info.message)}</div>` : '';
+  else if (info === null) body = '<div class="cc-body"><p class="cc-none">当前仓库中找不到该提交</p></div>';
+  else if (info?.error) body = `<div class="cc-body"><p class="cc-none">${esc(info.error)}</p></div>`;
+  else body = '<div class="cc-body"><p class="cc-none">正在读取提交信息…</p></div>';
+  // hash、时间和 Markdown 内容均先转义；不解释提交说明中的原始 HTML。
+  commitCard.innerHTML = `<div class="cc-head"><code>${esc(hash.slice(0, 7))}</code>${time ? `<span class="ctime">${esc(time)}</span>` : ''}</div>${body}`;
+  commitCard.hidden = false;
+  const rect = trigger.getBoundingClientRect(), width = commitCard.offsetWidth, height = commitCard.offsetHeight;
+  let top = rect.bottom + 6;
+  if (top + height > innerHeight - 8) top = Math.max(8, rect.top - height - 6);
+  commitCard.style.left = Math.max(8, Math.min(rect.left, innerWidth - width - 8)) + 'px';
+  commitCard.style.top = top + 'px';
+  if (!commitCache.has(hash)) void fetchCommit(hash);
+}
+document.addEventListener('mouseover', event => {
+  const trigger = event.target.closest('.commit[data-hash]');
+  if (trigger && trigger !== cardTrigger) showCommitCard(trigger);
+});
+document.addEventListener('mouseout', event => {
+  if (!cardTrigger) return;
+  if (event.relatedTarget instanceof Element && event.relatedTarget.closest('.commit[data-hash]') === cardTrigger) return;
+  if (event.target.closest('.commit[data-hash]')) hideCommitCard();
+});
+document.addEventListener('focusin', event => {
+  const trigger = event.target.closest('.commit[data-hash]');
+  if (trigger) showCommitCard(trigger);
+});
+document.addEventListener('focusout', event => {
+  if (event.target.closest('.commit[data-hash]')) hideCommitCard();
+});
+document.addEventListener('click', event => {
+  const trigger = event.target.closest('.commit[data-hash]');
+  if (trigger) showCommitCard(trigger);
+});
+document.addEventListener('keydown', event => { if (event.key === 'Escape') hideCommitCard(); });
+// 卡片挂在 body 上，避免被表格裁切；内容滚动、窗口变化和视图重建时隐藏旧卡片。
+document.addEventListener('scroll', hideCommitCard, true);
+window.addEventListener('resize', hideCommitCard);
+
+function renderDetail(feature) {
+  hideCommitCard();
+  const detail = $('detail'); detail.replaceChildren();
+  if (!feature) { detail.append(element('p', 'empty', snapshot.features.length ? '请更改筛选条件' : '暂无功能文档')); return; }
+  const eyebrow = element('div', 'eyebrow');
+  eyebrow.append(element('span', '', feature.module), element('code', '', feature.id), element('span', 'badge', feature.status));
+  detail.append(eyebrow, element('h2', '', feature.name), element('p', 'purpose', feature.description),
+    element('p', 'source', `${feature.document}:${feature.line}`));
+  const relationRows = [...relatedFunctionsOf(feature)].map(([id, labels]) => {
+    const related = snapshot.features.find(item => item.id === id);
+    const row = element('tr');const target = element('td');
+    const link = element('button', 'relation-table-link', id);link.type = 'button';link.disabled = !related;
+    link.addEventListener('click', () => selectFeature(id));target.append(link);
+    row.append(element('td', '', [...labels].join('、')), target, element('td', '', related?.name || '未定义的功能'));
+    return row;
+  });
+  const tables = [
+    ['行为场景', scenarioTable(feature)],
+    ['功能关系', createDetailTable('relations-table', ['关系', '功能编号', '功能名称'], relationRows, '无直接关系')],
+    ['实现位置', implementationTable(feature)],
+  ];
+  for (const [title, table] of tables) {
+    const section = element('section');const wrapper = element('div', 'detail-table-wrap');wrapper.append(table);
+    section.append(element('h3', 'section-heading', title), wrapper);detail.append(section);
+  }
+  const commit = element('section');commit.append(element('h3', 'section-heading', '创建提交'));
+  if (feature.created_commit) commit.append(commitMeta(feature.created_commit));
+  else commit.append(element('p', 'small-empty', '未登记'));
+  detail.append(commit);
+}
+async function refresh(force = false) {
+  if (loading) return;
+  loading = true;
+  try {
+    const response = await fetch('/api/features', {cache: 'no-store'});
+    if (!response.ok) throw new Error('无法读取功能文档');
+    const payload = await response.text();
+    $('notice').hidden = true;
+    // 未变化时不重建详情，保留滚动位置、焦点和用户展开的内容。
+    if (force || payload !== lastPayload) {
+      snapshot = JSON.parse(payload); lastPayload = payload;
+      $('project').textContent = snapshot.project;
+      const c = snapshot.coverage;
+      const totals = [['当前功能', c.features], ['行为场景', c.scenarios], ['未关联测试', c.scenarios_without_test_reference]];
+      $('totals').replaceChildren(...totals.map(([label, value]) => {
+        const item = element('div');item.append(element('strong', '', String(value)), document.createTextNode(label));return item;
+      }));
+      const selectedModule = $('module').value;
+      const options = [element('option', '', '全部模块')]; options[0].value = '';
+      for (const name of [...new Set(snapshot.features.map(f => f.module))].sort()) {
+        const option = element('option', '', name);option.value = name;options.push(option);
+      }
+      $('module').replaceChildren(...options);
+      $('module').value = options.some(option => option.value === selectedModule) ? selectedModule : '';
+      $('issues').hidden = !snapshot.issues.length;
+      $('issues').lastElementChild.replaceChildren(...snapshot.issues.map(issue => element('p', '', `${issue.location}：${issue.message}`)));
+      render();
+      void fetchCommits(snapshot.features.map(feature => feature.created_commit));
+    }
+  } catch (error) {
+    $('notice').textContent = lastPayload ? '读取失败，当前显示上次读取的数据。' : '无法连接功能视图服务，请启动 view.py。';
+    $('notice').hidden = false;
+  } finally { loading = false; }
+}
+for (const id of ['search', 'module', 'status', 'gaps']) $(id).addEventListener('input', render);
+$('refresh').addEventListener('click', () => refresh(true));
+window.addEventListener('hashchange', () => selectFeature(location.hash.slice(1)));
+refresh();
+setInterval(() => { if (!document.hidden) refresh(); }, 5000);
+</script>
+</body>
+</html>

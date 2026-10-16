@@ -78,6 +78,46 @@ class TestFeaturectl(unittest.TestCase):
         self.assertEqual([], [x for x in report if x.severity == "error"])
         self.assertEqual(2, len(features))
 
+    def test_feature_metadata_and_full_index(self):
+        document = self.root / "features" / "inventory.md"
+        document.write_text(document.read_text(encoding="utf-8").replace(
+            "消耗物品\n", "消耗物品 草案\n\n创建提交：abcdef1234567\n"), encoding="utf-8")
+        features, issues = scan(self.root)
+        feature = next(f for f in features if f.fid == "F-INV-002")
+        self.assertEqual("草案", feature.status)
+        self.assertEqual("消耗物品", feature.name)
+        self.assertEqual("库存管理", feature.module)
+        self.assertEqual("abcdef1234567", feature.created_commit)
+        self.assertEqual("从库存中消耗指定数量。", feature.description)
+        indexed = next(f for f in to_index(features)["features"] if f["id"] == feature.fid)
+        self.assertEqual("abcdef1234567", indexed["created_commit"])
+        self.assertEqual("S-01", indexed["scenarios"][0]["id"])
+        self.assertEqual("src/inventory.py::Inventory.consume", indexed["implementations"][0]["symbol"])
+        self.assertFalse([x for x in issues if x.severity == "error"])
+
+    def test_creation_commit_blank_invalid_and_duplicate(self):
+        document = self.root / "features" / "inventory.md"
+        original = document.read_text(encoding="utf-8")
+        for value, expected_error in (("-", False), ("", False), ("abcdef1", False),
+                                      ("HEAD", True), ("$(command)", True)):
+            with self.subTest(value=value):
+                document.write_text(original.replace("从库存", f"创建提交：{value}\n\n从库存"), encoding="utf-8")
+                features, issues = scan(self.root)
+                self.assertEqual(expected_error, any(x.severity == "error" for x in issues))
+        document.write_text(original.replace("从库存", "创建提交：abcdef1\n创建提交：abcdef2\n\n从库存"), encoding="utf-8")
+        _, issues = scan(self.root)
+        self.assertTrue(any("重复" in x.message for x in issues))
+
+    def test_retired_features_stay_visible_without_inflating_current_coverage(self):
+        document = self.root / "features" / "inventory.md"
+        document.write_text("# 库存管理\n\n~~## F-INV-002 消耗物品~~ 已废弃\n\n不再提供库存扣减。\n", encoding="utf-8")
+        features, issues = scan(self.root)
+        retired = next(f for f in features if f.fid == "F-INV-002")
+        self.assertEqual("已废弃", retired.status)
+        self.assertEqual(1, coverage(features)["features"])
+        self.assertEqual(2, len(to_index(features)["features"]))
+        self.assertFalse([x for x in validate(self.root, [retired], issues) if x.severity == "warning"])
+
     def test_reverse_index_and_impact(self):
         features, _ = scan(self.root)
         index = to_index(features)

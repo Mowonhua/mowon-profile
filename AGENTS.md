@@ -13,7 +13,7 @@
   - `agents/` — 各 harness 的接口元数据（如 `openai.yaml`），按需添加。
   - `references/` — skill 引用的补充文档，按需添加。
 - `.scratch/` — 本地草稿区，已 gitignore，不提交。
-- `.scratch/demo` - test-behavior-inventory skill 的 demo，供测试与验证使用，更新skill时需同步更新demo。
+- `.scratch/demo` — feature-unit-development skill 的功能视图演示项目；修改视图时同步更新并验证。
 
 ## 约定
 
