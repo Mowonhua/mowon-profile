@@ -213,6 +213,32 @@ function Install-GlobalPrompts {
     }
 }
 
+# 只清理本安装器创建的同名一级技能链接。仅在仓库 skills 目录存在时调用；
+# 使用非递归 Delete 删除链接本身，不遍历 junction 或符号链接的目标。
+function Remove-StaleLocalSkillLinks([string]$SkillsRoot, [string]$AgentsSkills) {
+    foreach ($item in (Get-ChildItem -LiteralPath $AgentsSkills -Force)) {
+        if ($item.LinkType -ne 'SymbolicLink' -and $item.LinkType -ne 'Junction') { continue }
+        $linkTarget = @($item.Target)[0]
+        if (-not $linkTarget) { continue }
+        if (-not [IO.Path]::IsPathRooted($linkTarget)) {
+            $linkTarget = Join-Path $AgentsSkills $linkTarget
+        }
+        $expected = Join-Path $SkillsRoot $item.Name
+        if ((Get-NormalizedPath $linkTarget) -ne (Get-NormalizedPath $expected)) { continue }
+        if (Test-Path -LiteralPath $linkTarget) { continue }
+        try {
+            if ($item.Attributes -band [IO.FileAttributes]::Directory) {
+                [IO.Directory]::Delete($item.FullName, $false)
+            } else {
+                [IO.File]::Delete($item.FullName)
+            }
+            Ok "- $($item.Name) stale local skill link removed"
+        } catch {
+            Warn "could not remove stale local skill link: $($item.FullName): $_"
+        }
+    }
+}
+
 function Install-LocalSkills {
     Info "== Local skills (linked to the repo) =="
     $skillsRoot = Join-Path $RepoDir 'skills'
@@ -224,7 +250,11 @@ function Install-LocalSkills {
     if (-not (Test-Path -LiteralPath $agentsSkills -PathType Container)) {
         New-Item -ItemType Directory -Path $agentsSkills -Force | Out-Null
     }
+    Remove-StaleLocalSkillLinks -SkillsRoot $skillsRoot -AgentsSkills $agentsSkills
     foreach ($dir in (Get-ChildItem -LiteralPath $skillsRoot -Directory | Sort-Object Name)) {
+        # deprecated 仅存放归档技能；一级目录直接含 SKILL.md 时才是安装项。
+        if ($dir.Name -eq 'deprecated') { continue }
+        if (-not (Test-Path -LiteralPath (Join-Path $dir.FullName 'SKILL.md') -PathType Leaf)) { continue }
         Install-Entry -Source $dir.FullName -Target (Join-Path $agentsSkills $dir.Name) -Name $dir.Name
     }
 }

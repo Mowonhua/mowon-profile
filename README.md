@@ -8,6 +8,7 @@
 | --- | --- |
 | `system/` | 全局指令源文件，如各 harness 通用的 `AGENTS.md` |
 | `skills/<name>/` | skill 集合，每个 skill 一个目录，含 `SKILL.md` |
+| `skills/deprecated/` | 归档的 skill，不安装 |
 | `.scratch/` | 本地草稿区，不入库 |
 
 ## 安装
@@ -21,5 +22,7 @@
 | `install/skills-cloud.list` 中的云端 skills | `~/.agents/skills/` | `npx skills@latest add`；已记录在 `~/.agents/.skill-lock.json` 中的自动跳过，更新用 `npx skills update` |
 
 两个脚本的提示信息均为英文。Windows 下创建符号链接需要管理员或开发者模式：目录链接自动降级为 junction，文件降级为复制。
+
+本地 skill 只从 `skills/` 的一级目录安装。安装脚本跳过 `deprecated` 和不含 `SKILL.md` 的目录，不递归扫描归档内容。安装前，脚本清理指向本仓库 `skills/<同名目录>`、但目标已不存在的链接。脚本保留有效链接、其他来源的链接和普通目录。
 
 云端 skill 的分发目标 agent 默认 `codex`（skills CLI 对这类 universal agent 只写入统一目录 `~/.agents/skills`，不改动各 harness 目录），可用 `SKILLS_AGENTS=... ./install.sh` 覆盖。按 skill 配置各模型可见性的分发暂未实现。

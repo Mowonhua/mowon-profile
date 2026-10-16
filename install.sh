@@ -156,6 +156,35 @@ install_prompts() {
   done
 }
 
+# 只清理本安装器创建的同名一级技能链接。父目录必须仍可解析，避免把
+# 仓库不可访问误判为技能已删除；rm 不递归、不带尾斜杠，只删除链接本身。
+cleanup_stale_local_skills() {
+  local root target raw parent resolved expected
+  root="$(cd "$REPO_DIR/skills" && pwd -P)" || return
+  for target in "$AGENTS_HOME"/skills/*; do
+    [ -L "$target" ] && [ ! -e "$target" ] || continue
+    raw="$(readlink "$target")" || continue
+    if [ "$OS" = windows ] && command -v cygpath >/dev/null 2>&1; then
+      raw="$(cygpath -u "$raw")" || continue
+    fi
+    case "$raw" in /*) ;; *) raw="$(dirname "$target")/$raw" ;; esac
+    raw="${raw%/}"
+    parent="$(cd "$(dirname "$raw")" 2>/dev/null && pwd -P)" || continue
+    resolved="$parent/$(basename "$raw")"
+    expected="$root/$(basename "$target")"
+    if [ "$OS" = windows ]; then
+      resolved="$(printf '%s' "$resolved" | tr '[:upper:]' '[:lower:]')"
+      expected="$(printf '%s' "$expected" | tr '[:upper:]' '[:lower:]')"
+    fi
+    [ "$resolved" = "$expected" ] || continue
+    if rm -- "$target"; then
+      ok "- $(basename "$target") stale local skill link removed"
+    else
+      warn "could not remove stale local skill link: $target"
+    fi
+  done
+}
+
 install_local_skills() {
   log "== Local skills (linked to the repo) =="
   if [ ! -d "$REPO_DIR/skills" ]; then
@@ -163,10 +192,14 @@ install_local_skills() {
     return
   fi
   mkdir -p "$AGENTS_HOME/skills"
+  cleanup_stale_local_skills
   local src name target
   for src in "$REPO_DIR"/skills/*/; do
     [ -d "$src" ] || continue
     name="$(basename "$src")"
+    # deprecated 仅存放归档技能；一级目录直接含 SKILL.md 时才是安装项。
+    [ "$name" = deprecated ] && continue
+    [ -f "$src/SKILL.md" ] || continue
     src="$REPO_DIR/skills/$name"
     target="$AGENTS_HOME/skills/$name"
     if link_points_to "$target" "$src"; then
