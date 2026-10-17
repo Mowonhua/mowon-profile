@@ -1,221 +1,238 @@
 ---
 name: design-exploration
-description: Explore a product's visual language, implement and show distinct directions as switchable UI prototypes, converge with the user, then delegate DESIGN.md creation to design-creator. Use for greenfield, partial-direction, or substantial visual reorientation work where the design language must be discovered rather than extracted from a mature interface.
+description: 探索产品的视觉语言，把多个方向实现并展示为可切换的 UI 原型，与用户收敛后，把 DESIGN.md 的创建委托给 design-creator。用于从零开始、方向不完整，或需要大幅视觉重定向、且设计语言必须被探索而不是从成熟界面中提取的工作。
+disable-model-invocation: true
 ---
 
-# Design Exploration
+# 视觉探索
 
-Lead the discovery and convergence of a product's visual language. Turn product intent into several meaningfully different directions, implement them as comparable prototypes, and help the user select a coherent direction.
+主导产品视觉语言的发现与收敛。把产品意图转化为若干有实质差异的方向，实现为可比较的原型，并帮助用户选出连贯的方向。
 
-This skill owns exploration and decision evidence. After convergence, invoke `design-creator` and let that skill create and validate `DESIGN.md` from the confirmed design handoff.
+本 skill 拥有探索和决策证据。收敛后调用 `design-creator`，由它依据已确认的设计交接创建并校验 `DESIGN.md`。
 
-## Core Principles
+## 核心原则
 
-1. **Explore before specifying.** Do not jump from a short product description directly to a finished design system.
-2. **Separate requirements from aesthetic choices.** Product goals constrain the space but do not predetermine one style.
-3. **Make directions structurally distinct.** Palette or font swaps do not count as separate directions.
-4. **Compare rendered evidence.** Implement every candidate direction as a directly comparable UI prototype before asking the user to choose.
-5. **Explain tradeoffs.** State what each direction emphasizes, sacrifices, and risks.
-6. **Converge deliberately.** A hybrid is valid only when the combined properties support one coherent thesis.
-7. **Preserve uncertainty.** Keep unresolved decisions visible instead of silently turning assumptions into permanent rules.
-8. **Delegate the durable artifact.** Only `design-creator` may synthesize the selected direction into `DESIGN.md`.
+1. **先探索再定规范。** 不要从简短的产品描述直接跳到完成的设计系统。
+2. **区分需求与美学选择。** 产品目标约束空间，但不预定某一种风格。
+3. **让方向在结构上不同。** 只换调色板或字体不算独立方向。
+4. **比较渲染后的证据。** 在让用户选择前，把每个候选方向实现为可直接比较的 UI 原型。
+5. **解释取舍。** 说明每个方向强调什么、牺牲什么、有什么风险。
+6. **有意识地收敛。** 只有组合后的属性共同支撑一个连贯命题时，混合方案才成立。
+7. **保留不确定性。** 让未决决策保持可见，不要默默把假设变成永久规则。
+8. **委托持久产物。** 只有 `design-creator` 可以把选定方向综合成 `DESIGN.md`。
 
-# Workflow
+# 工作流程
 
-## Phase 0 — Determine the Starting State
+## 阶段 0 — 判断起始状态
 
-Classify the task:
+对任务分类：
 
-- **Greenfield:** no established visual language exists.
-- **Partial direction:** references, keywords, brand fragments, or isolated UI ideas exist without a coherent system.
-- **Reorientation:** an existing system is being substantially redirected.
+- **从零开始（Greenfield）**：尚无既有视觉语言。
+- **方向不完整（Partial direction）**：已有参考、关键词、品牌碎片或孤立 UI 想法，但没有连贯系统。
+- **重定向（Reorientation）**：现有系统正被大幅改向。
 
-This skill is optimized for Greenfield and Partial direction. For a mature interface that only needs its existing system documented, use a design-system extraction workflow instead.
+本 skill 针对从零开始和方向不完整的场景优化。成熟界面只需归档现有系统时，改用设计系统提取流程。
 
-Treat existing fragments as constraints only when the user says they must remain.
+只有当用户说明必须保留时，才把既有碎片当作约束。
 
-## Phase 1 — Build the Design Brief
+## 阶段 1 — 构建设计简报
 
-Collect or infer only the context needed to judge directions:
+只收集或推断判断方向所需的上下文：
 
-- product type and core use cases
-- target audience
-- platform and interaction environment
-- brand or product personality
-- desired emotional response
-- information density and usage duration
-- accessibility and technical constraints
-- brand assets that must remain
-- explicit references, anti-references, likes, and dislikes
+- 产品类型和核心用例
+- 目标受众
+- 平台和交互环境
+- 品牌或产品人格
+- 期望的情绪反应
+- 信息密度和使用时长
+- 无障碍和技术约束
+- 必须保留的品牌资产
+- 明确的参考、反参考、喜欢和不喜欢
 
-Summarize a concise **Design Brief**:
+总结一份简洁的**设计简报（Design Brief）**：
 
-### Product Context
-What the product is and what users do with it.
+### 产品上下文
 
-### Experience Goals
-How the product should feel during use.
+产品是什么，用户用它做什么。
 
-### Functional Design Constraints
-Platform, density, interaction, accessibility, and implementation constraints.
+### 体验目标
 
-### Visual Constraints
-Only visual decisions already fixed by the user or product.
+使用产品时应有什么感受。
 
-### Open Questions
-Only unresolved choices that materially change the exploration space.
+### 功能设计约束
 
-Do not ask the user to restate information already available.
+平台、密度、交互、无障碍和实现约束。
 
-## Phase 2 — Derive Design Criteria
+### 视觉约束
 
-Translate the brief into 4–8 observable, comparative criteria. Examples:
+只写用户或产品已经固定的视觉决策。
 
-- supports dense operational information without visual noise
-- feels arcane without resembling a fantasy inventory UI
-- maintains strong hierarchy at desktop scale
-- uses geometry that can be implemented consistently across controls
-- keeps decorative motifs subordinate to interaction clarity
+### 开放问题
 
-Avoid unqualified criteria such as "modern", "professional", or "looks good".
+只写会实质改变探索空间的未决选择。
 
-Identify the tensions that distinguish plausible directions, such as expressive versus utilitarian, dense versus spacious, ornamental versus restrained, organic versus geometric, tactile versus flat, and familiar versus distinctive. Treat them as continuums rather than binary choices.
+不要让用户重复已经可获得的信息。
 
-## Phase 3 — Research References When Useful
+## 阶段 2 — 推导设计准则
 
-Research only when references would answer a concrete design question. For every useful reference, extract:
+把简报转化为 4–8 条可观察、可比较的准则。例如：
 
-- the relevant principle
-- the visual mechanisms that create the effect
-- transferable properties
-- properties that should not be copied
+- 支持密集的操作型信息而不产生视觉噪音
+- 有秘仪感，但不像奇幻游戏背包界面
+- 在桌面尺度上保持清晰的层级
+- 使用的几何能跨控件一致实现
+- 让装饰性母题从属于交互清晰度
 
-Synthesize principles rather than reproducing another product's identity. If the user prohibits web research, use supplied and local context only.
+避免“现代”“专业”“好看”这类没有限定词的准则。
 
-## Phase 4 — Generate Design Directions
+找出区分可行方向的张力，例如表现性对实用性、密集对宽松、装饰对克制、有机对几何、触感对扁平、熟悉对独特。把它们当作连续谱，而不是二元选择。
 
-Create 3–5 directions. Default to 3 for a constrained problem and use 4–5 only when the space is genuinely broad.
+## 阶段 3 — 按需研究参考
 
-Describe each direction with:
+只有当参考能回答具体设计问题时才研究。对每个有用参考，提取：
 
-### Direction Identity
-A memorable name and one-sentence thesis.
+- 相关原则
+- 产生该效果的视觉机制
+- 可迁移的属性
+- 不应照搬的属性
 
-### Visual Character
-Atmosphere, density, ornament, geometry, rhythm, and emotional tone.
+综合原则，而不是复现另一个产品的识别。如果用户禁止联网研究，只使用提供的和本地的上下文。
 
-### Composition and Layout
-Grid behavior, alignment, containment, whitespace, hierarchy, and density.
+## 阶段 4 — 生成设计方向
 
-### Color Strategy
-Palette logic and semantic use of color. Values remain provisional until the direction is selected.
+创建 3–5 个方向。约束明确的问题默认 3 个；只有空间确实宽广时才用 4–5 个。
 
-### Typography Strategy
-Type roles, hierarchy, contrast, rhythm, and treatment of narrative versus technical information.
+用以下内容描述每个方向：
 
-### Shape Language
-Corners, linework, geometry, icons, borders, motifs, and repeated forms.
+### 方向身份
 
-### Depth and Material
-Flat contrast, tonal layers, borders, translucency, shadows, texture, or lighting.
+一个易记的名字和一句话命题。
 
-### Component Character
-How representative buttons, inputs, panels, tabs, selections, and data displays express the direction.
+### 视觉特征
 
-### Motion Character
-Tempo, easing character, transition hierarchy, and whether motion is expressive or functional.
+氛围、密度、装饰、几何、节奏和情绪基调。
 
-### Distinctive Signature
-One to three repeatable ideas that make the direction recognizable without depending on a logo or illustration.
+### 构图与布局
 
-### Risks and Best Fit
-Usability, accessibility, maintenance, implementation, and cliché risks, plus the priorities this direction serves best.
+网格行为、对齐、容器、留白、层级和密度。
 
-Define one representative surface and a fixed content/state fixture that exposes important hierarchy, density, controls, and edge conditions. Every direction must use this same comparison fixture.
+### 色彩策略
 
-## Phase 5 — Prototype and Compare Directions
+调色板逻辑和颜色的语义用法。方向选定前，具体值保持暂定。
 
-Invoke the `prototype` skill and follow its **UI prototype** branch. Read that skill's `SKILL.md` and `UI.md` completely before implementation.
+### 字体策略
 
-Map directions to prototype variants:
+字体角色、层级、对比、节奏，以及叙事信息与技术信息的处理差异。
 
-- create one variant for every direction
-- prefer a suitable existing route; otherwise create one clearly named throwaway route using project conventions
-- keep content, data, copy, states, viewport assumptions, and functional scope identical
-- preserve structural differences in layout, hierarchy, geometry, typography, depth, components, and motion
-- use the prototype skill's URL-backed switcher so all directions share one route
-- keep interactions read-only or stubbed unless interaction is essential to judging the direction
-- mark the implementation as throwaway and do not promote prototype shortcuts directly into production
+### 形状语言
 
-Run the prototype and verify every shareable `?variant=` URL. Show the result:
+圆角、线条、几何、图标、边框、母题和重复形式。
 
-- provide the runnable URL and variant-to-direction mapping
-- when supported, present one screenshot per direction at the same viewport
-- when a live preview or image cannot be exposed, provide the exact run command and variant URLs and state the limitation
+### 深度与材质
 
-Compare rendered variants against the Phase 2 criteria. Identify the strongest direction for each criterion, important tradeoffs, directions that should merge or be discarded, and properties worth borrowing across directions. Do not hide the reasoning behind an unexplained numeric score.
+扁平对比、色调分层、边框、半透明、阴影、纹理或光照。
 
-Ask the user to choose, reject, combine, or revise directions when interactive iteration is possible. Do not invoke `design-creator` while material visual decisions remain unresolved.
+### 组件特征
 
-## Phase 6 — Converge and Prepare the Design Handoff
+代表性按钮、输入、面板、标签页、选择和数据展示如何体现该方向。
 
-Turn the selected direction into one coherent thesis. Resolve contradictions across color, typography, layout, spacing, depth, shape, components, interaction states, motion, iconography, illustration, and domain-specific extensions.
+### 动效特征
 
-Record a **Design Handoff** for `design-creator` containing:
+节奏、缓动特征、过渡层级，以及动效是表现性还是功能性的。
 
-- product context, audience, platform, and primary tasks
-- selected direction and its visual thesis
-- prototype URL, winning variant, and the reasons it won
-- accepted properties borrowed from other variants and their shared rationale
-- confirmed visual and functional constraints
-- desired atmosphere plus density, variance, and motion intent
-- chosen or strongly preferred palette roles, typography roles, layout model, shape language, depth model, component character, responsive behavior, and interaction behavior
-- accessibility target and implementation constraints
-- explicit anti-references and forbidden treatments
-- unresolved choices that `design-creator` may decide
-- user decisions that are fixed and must not be overridden by taste defaults
+### 辨识签名
 
-The handoff describes the selected design; it is not a draft `DESIGN.md`. Do not add a document schema, token schema, final headings, frontmatter, or a `DESIGN.md` skeleton.
+一到三个可重复的想法，让方向在没有 logo 或插画的情况下仍可辨认。
 
-## Phase 7 — Delegate DESIGN.md Creation
+### 风险与最佳适配
 
-Invoke `design-creator`. Read its `SKILL.md` completely and provide the Design Handoff plus any selected prototype evidence it needs.
+可用性、无障碍、维护、实现和俗套风险，以及该方向最擅长服务的优先级。
 
-The delegation contract is strict:
+定义一个代表性界面，以及固定的内容/状态夹具，用来暴露重要层级、密度、控件和边界条件。每个方向都必须使用同一套比较夹具。
 
-- `design-creator` owns the `DESIGN.md` structure, exact values, synthesis, writing, and validation.
-- Preserve fixed user decisions and project constraints from the handoff. Apply `design-creator` defaults only where the handoff leaves room.
-- If a `design-creator` default conflicts with an explicit user decision, the user decision wins and the deviation should be stated in the resulting design guidance.
-- Do not prewrite sections for the subskill, retrofit a second format afterward, or independently revise the generated file against rules from this skill.
-- If `design-creator` is unavailable, stop after delivering the Design Handoff and state that `DESIGN.md` could not be created. Do not implement a fallback writer inside this skill.
+## 阶段 5 — 制作原型并比较方向
 
-After `design-creator` finishes, deliver its `DESIGN.md` together with the prototype evidence and selected-direction rationale. When the selected direction is later implemented in production, follow the `prototype` skill's capture and cleanup contract so losing variants and the switcher do not remain in production code.
+调用 `prototype` skill，遵循其 **UI 原型**分支。实现前完整阅读该 skill 的 `SKILL.md` 和 `UI.md`。
 
-# Interaction Rules
+把方向映射到原型变体：
 
-Ask questions only when missing information would materially change the design space. Prefer a few high-leverage questions over exact color, radius, or font-size choices before coherent directions exist.
+- 每个方向创建一个变体
+- 优先复用现有合适路由；否则按项目约定创建一个命名清晰的临时路由
+- 保持内容、数据、文案、状态、视口假设和功能范围一致
+- 保留布局、层级、几何、字体、深度、组件和动效上的结构差异
+- 使用 prototype skill 的 URL 切换器，让所有方向共用一个路由
+- 除非交互对判断方向必不可少，否则交互保持只读或占位
+- 把实现标记为临时，不要把原型捷径直接提升为生产代码
 
-If the user requests a one-pass result, still create and compare multiple prototype directions, select the strongest against the criteria, record the assumptions, prepare the handoff, and invoke `design-creator` without waiting for another turn.
+运行原型，验证每个可分享的 `?variant=` URL。展示结果：
 
-When combining directions, restate the hybrid as one thesis and verify every borrowed property against it. Do not mechanically combine one direction's colors, another's typography, and a third's shapes.
+- 提供可运行 URL 和变体到方向的映射
+- 支持时，按相同视口为每个方向提供一张截图
+- 无法提供实时预览或图像时，给出准确运行命令和变体 URL，并说明限制
 
-# Deliverables
+按阶段 2 的准则比较渲染后的变体。找出每条准则下最强的方向、重要取舍、应合并或丢弃的方向，以及值得跨方向借用的属性。不要把推理藏在未解释的数字评分后面。
 
-Depending on the current phase, produce:
+可交互迭代时，请用户选择、否决、组合或修改方向。只要实质性视觉决策仍未解决，就不要调用 `design-creator`。
 
-- `Design Brief`
-- `Design Criteria`
-- `Reference Findings`
-- `Design Directions`
-- `Direction Prototype` with runnable URL, variant mapping, and comparable previews when supported
-- `Direction Comparison`
-- `Selected Direction`
-- `Design Handoff`
-- `DESIGN.md` created and validated by `design-creator`
+## 阶段 6 — 收敛并准备设计交接
 
-The direction prototype is required throwaway implementation code. Do not implement the selected direction as production code unless the user asks.
+把选定方向转化为一个连贯命题。解决色彩、字体、布局、间距、深度、形状、组件、交互状态、动效、图标、插画和领域特定扩展之间的矛盾。
 
-# Suggested Working Files
+为 `design-creator` 记录一份**设计交接（Design Handoff）**，包含：
+
+- 产品上下文、受众、平台和主要任务
+- 选定方向及其视觉命题
+- 原型 URL、胜出变体及其胜出原因
+- 从其他变体接受的属性及共同理由
+- 已确认的视觉和功能约束
+- 期望氛围，以及密度、变化幅度和动效意图
+- 已选定或强烈倾向的调色板角色、字体角色、布局模型、形状语言、深度模型、组件特征、响应式行为和交互行为
+- 无障碍目标和实现约束
+- 明确的反参考和禁用处理
+- 可由 `design-creator` 决定的未决选择
+- 已固定、不得被品味默认值覆盖的用户决策
+
+交接描述选定的设计；它不是 `DESIGN.md` 的草稿。不要添加文档 schema、令牌 schema、最终标题、frontmatter 或 `DESIGN.md` 骨架。
+
+## 阶段 7 — 委托创建 DESIGN.md
+
+调用 `design-creator`。完整阅读其 `SKILL.md`，并提供设计交接及其所需的选定原型证据。
+
+委托契约是严格的：
+
+- `design-creator` 拥有 `DESIGN.md` 的结构、精确值、综合、写作和校验。
+- 保留交接中已固定的用户决策和项目约束。只在交接留有余地时应用 `design-creator` 的默认值。
+- 如果 `design-creator` 的默认值与明确的用户决策冲突，用户决策优先，并应在最终设计指导中说明偏差。
+- 不要为子 skill 预先写节、事后套第二套格式，或依据本 skill 的规则独立修改生成的文件。
+- 如果 `design-creator` 不可用，交付设计交接后停止，并说明无法创建 `DESIGN.md`。不要在本 skill 内实现备用写入器。
+
+`design-creator` 完成后，交付其 `DESIGN.md`，以及原型证据和选定方向理由。选定方向之后进入生产实现时，遵循 `prototype` skill 的截图记录与清理契约，避免落选变体和切换器留在生产代码中。
+
+# 交互规则
+
+只有当缺失信息会实质改变设计空间时才提问。在连贯方向出现前，优先问少量高杠杆问题，而不是精确的颜色、圆角或字号选择。
+
+如果用户要求一次完成，仍要创建并比较多个原型方向，按准则选出最强方向，记录假设，准备交接，并直接调用 `design-creator`，不要等待下一轮。
+
+组合方向时，把混合方案重述为一个命题，并对照它验证每个借用属性。不要机械地把一个方向的颜色、另一个方向的字体和第三个方向的形状拼在一起。
+
+# 交付物
+
+按当前阶段产出：
+
+- **设计简报（Design Brief）**
+- **设计准则（Design Criteria）**
+- **参考发现（Reference Findings）**
+- **设计方向（Design Directions）**
+- **方向原型（Direction Prototype）**，含可运行 URL、变体映射和支持时的可比较预览
+- **方向比较（Direction Comparison）**
+- **选定方向（Selected Direction）**
+- **设计交接（Design Handoff）**
+- 由 `design-creator` 创建并校验的 `DESIGN.md`
+
+方向原型是必需的临时实现代码。除非用户要求，不要把选定方向实现为生产代码。
+
+# 建议工作文件
 
 ```text
 design/
@@ -225,19 +242,19 @@ design/
 └── handoff.md
 ```
 
-Keep prototype code on the host route or a clearly named throwaway route as required by the `prototype` skill. `design-creator` decides where and how to create the durable `DESIGN.md`.
+按 `prototype` skill 的要求，把原型代码放在主路由或命名清晰的临时路由上。`design-creator` 决定在哪里以及如何创建持久的 `DESIGN.md`。
 
-# Failure Modes
+# 失败模式
 
-Avoid:
+避免：
 
-1. generating `DESIGN.md` before directions are rendered and compared
-2. offering directions that differ only in palette or typography
-3. comparing variants with different content, data, states, or viewport conditions
-4. choosing fashionable styling without tying it to product goals
-5. copying a reference product's identity
-6. combining directions without a coherent thesis
-7. defining token rules, output headings, frontmatter, or a `DESIGN.md` skeleton in this skill
-8. writing, validating, or post-processing `DESIGN.md` instead of delegating to `design-creator`
-9. overriding fixed user choices with `design-creator` defaults
-10. leaving losing variants or the prototype switcher in production code
+1. 在方向被渲染和比较前生成 `DESIGN.md`
+2. 提供只在调色板或字体上不同的方向
+3. 用不同内容、数据、状态或视口条件比较变体
+4. 选择时髦样式却不与产品目标挂钩
+5. 复制参考产品的识别
+6. 没有连贯命题就组合方向
+7. 在本 skill 中定义令牌规则、输出标题、frontmatter 或 `DESIGN.md` 骨架
+8. 自己写、校验或后处理 `DESIGN.md`，而不是委托给 `design-creator`
+9. 用 `design-creator` 的默认值覆盖已固定的用户选择
+10. 把落选变体或原型切换器留在生产代码中

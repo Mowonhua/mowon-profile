@@ -1,6 +1,7 @@
 ---
 name: auditing-design-proposals
 description: 当用户要求审查、评估或挑错一份方案、设计、架构、技术选型、实施计划或 PRD 文档，并希望获得中文 Markdown 审查报告时使用。
+disable-model-invocation: true
 ---
 
 # 方案文档审查

@@ -1,133 +1,177 @@
 ---
 name: design-creator
-description: Create or update a durable, spec-compliant DESIGN.md from a confirmed design handoff, selected prototype, or settled visual direction. Combines machine-readable design tokens with precise semantic guidance and anti-generic visual standards. Use after design-exploration converges, or when the user already has enough confirmed design decisions to create the design-system source of truth. Do not use for open-ended visual exploration or UI implementation.
+description: 依据已确认的设计交接、选定的原型或已定稿的视觉方向，创建或更新持久、符合规范的 DESIGN.md。把机器可读的设计令牌与精确的语义指导、反模板化视觉标准结合起来。当 design-exploration 已收敛，或用户已有足够确认的设计决策、需要建立设计系统的单一事实源时使用。不用于开放式视觉探索或 UI 实现。
+disable-model-invocation: true
 ---
 
-# Design Creator
+# 设计文档创建
 
-Create `DESIGN.md` as a durable contract for humans, coding agents, design tools, and screen-generation agents. The result must combine two layers:
+把 `DESIGN.md` 建成对人、编码代理、设计工具和界面生成代理都持久的契约。结果必须同时包含两层：
 
-- **Normative token layer:** exact, machine-readable values in YAML frontmatter.
-- **Semantic guidance layer:** visual rationale, application rules, responsive behavior, interaction behavior, and enforceable guardrails in Markdown.
+- **规范令牌层**：YAML frontmatter 中精确、机器可读的值。
+- **语义指导层**：Markdown 中的视觉理由、应用规则、响应式行为、交互状态外观和可执行的护栏。
 
-This skill authors the design-system source of truth. It does not explore multiple visual directions and does not implement UI code.
+本 skill 负责创建设计系统的单一事实源。它不探索多个视觉方向，也不实现 UI 代码。文档只拥有可复用的视觉规则；页面规格、业务规则、实现参数、验证步骤和变更历史属于其他文档，本 skill 负责守住这条边界。
 
-## Required References
+## 必读参考
 
-Before authoring or updating `DESIGN.md`, read both references completely:
+在创建或更新 `DESIGN.md` 前，完整阅读这两份参考：
 
-- [references/spec.md](references/spec.md) is the authoritative format, schema, token, section-order, and consumer-behavior contract.
-- [references/taste-guidelines.md](references/taste-guidelines.md) guides visual precision, anti-generic decisions, responsive behavior, motion restraint, and product-surface adaptation.
+- [references/spec.md](references/spec.md) 是格式、schema、令牌、节顺序和消费方行为的权威契约。
+- [references/taste-guidelines.md](references/taste-guidelines.md) 指导视觉精度、反模板化决策、响应式行为、动效克制和产品界面适配。
 
-Do not replace the format contract with the taste guidelines. Do not treat taste defaults as stronger than confirmed product decisions.
+捆绑的 `references/spec.md` 是上游规范的固定副本，由生成流程产生。当官方 linter 或当前上游文档给出更新规则时，遵循更新的规则并报告偏差，不要编辑生成文件。
 
-## Authority Order
+不要用品味指南替代格式契约。不要把品味默认值置于已确认的产品决策之上。
 
-Resolve conflicts in this order:
+## 权威顺序
 
-1. Explicit user decisions and confirmed choices from the design handoff.
-2. Product behavior, platform constraints, accessibility requirements, and implementation reality.
-3. The bundled `DESIGN.md` format specification.
-4. Selected prototype evidence and documented direction rationale.
-5. Taste guidelines for choices still genuinely open.
+按以下顺序解决冲突：
 
-The format specification governs how decisions are encoded, not which aesthetic direction wins. Taste guidance improves unresolved choices but must not erase deliberate product identity.
+1. 用户明确决策和设计交接中已确认的选择。
+2. 产品行为、平台约束、无障碍要求和实现现实。
+3. 捆绑的 `DESIGN.md` 格式规范。
+4. 选定原型证据和已记录的方向理由。
+5. 对仍真正开放的选择使用品味指南。
 
-# Workflow
+格式规范决定如何编码决策，不决定哪种美学方向胜出。品味指南改善未决选择，但不能抹掉有意的产品识别。
 
-## Phase 1 — Establish the Evidence Set
+# 归属契约
 
-Read the available inputs in full:
+`DESIGN.md` 拥有可复用的视觉系统。它不是设计笔记、页面目录、实现日记或变更日志。
 
-- Design Handoff from `design-exploration`
-- selected prototype or comparable screenshots
-- decision record explaining why the direction won
-- existing brand assets and fixed constraints
-- existing `DESIGN.md`, if present
-- relevant implementation constraints or component-library limitations
+它拥有：
 
-Distinguish each input as:
+- 规范设计令牌及应用它们的规则
+- 适用于两个及以上屏幕、界面或共享状态的视觉规则
+- 共享的颜色、字体、间距、形状、材质、深度、响应式和动效语言
+- 可复用组件原语及其状态语义
+- 防止视觉漂移的护栏
+- 用一小段范围声明说明文档不拥有什么
 
-- **Fixed:** explicitly confirmed and not open to reinterpretation.
-- **Preferred:** strongly supported by the selected direction but adjustable to resolve a conflict.
-- **Open:** intentionally delegated to this skill.
+它不拥有：
 
-If the input still contains competing visual directions or unresolved choices that would materially change the design system, stop and return the unresolved decisions to `design-exploration`. Do not silently choose a direction.
+| 内容 | 拥有者 |
+|---|---|
+| 页面构图、逐屏布局和测量值 | UI/UX 设计文档或 GDD |
+| 交互流程、快捷键和行为 | 产品文档或 UI 设计文档 |
+| 业务规则及其数值（价格、容量、掉率、公式） | GDD 或领域参照；其共享视觉编码仍是设计令牌 |
+| 引擎、资产、着色器、图集和管线参数 | 实现参照或美术管线参照 |
+| 验证步骤和 QA 清单 | 测试或 QA 文档，或所属模块 |
+| 决策历史、变更日志和开放问题 | 决策记录或工单系统 |
+| 单功能工作笔记和截图 | `.scratch/` 或对应工单 |
+| 穷举式组件清单和变体 | 实现文档或组件文档 |
 
-If only bounded details are open, resolve them using the authority order and record the reasoning in the document where it helps future application.
+在加入任何句子或节前运行以下准入测试。必须全部通过：
 
-## Phase 2 — Classify the Product Surface
+1. **复用**：该规则约束至少两个不同屏幕、界面或共享状态。
+2. **未见屏幕**：另一个代理能在未被告知具体页面的情况下，把它应用到一个从未见过的屏幕。
+3. **令牌或规则**：它是规范令牌、通过令牌应用的规则或护栏；不是对另一文档已拥有事实的复制。
 
-Classify the primary surface before applying taste rules:
+任一测试不通过时，不要把内容写进 `DESIGN.md`。把它路由到拥有者文档并报告去向。若没有拥有者，报告缺失的文档，而不是把 `DESIGN.md` 变成那份文档。
 
-- marketing or editorial site
-- consumer application
-- desktop or productivity tool
-- dashboard or operational interface
-- game UI or HUD
-- mixed product with multiple surface types
+坚持**拥有或链接**，不要两者都做：当 `DESIGN.md` 拥有某个事实时，其他文档链接它而不是复制；当另一文档拥有某个事实时，`DESIGN.md` 链接它而不是复述。保留现有项目决策明确指派给 `DESIGN.md` 的归属；不要悄悄搬走它，也不要复制它链接的细节。
 
-This classification determines which guidance is relevant. Hero composition, inline editorial imagery, and single-CTA rules apply only to marketing or editorial surfaces. Density, scanability, persistent navigation, technical typography, and restrained motion take priority in operational interfaces. Add domain-specific sections when the product needs them.
+# 工作流程
 
-## Phase 3 — Resolve the Visual System
+## 阶段 1 — 建立证据集
 
-Synthesize one internally coherent system from the evidence.
+完整阅读可用输入：
 
-### Atmosphere and Identity
+- 来自 `design-exploration` 的设计交接
+- 选定原型或可比较的截图
+- 说明该方向为何胜出的决策记录
+- 现有品牌资产和固定约束
+- 现有 `DESIGN.md`（如有）
+- 相关实现约束或组件库限制
+- 项目的文档地图，以及已经拥有 UI、视觉、业务、美术和测试事实的文档
 
-State the visual thesis, audience, emotional response, density, variance, and motion intent. Describe how the central visual tensions are resolved.
+把每项输入区分为：
 
-### Color
+- **固定（Fixed）**：明确确认，不接受重新解释。
+- **倾向（Preferred）**：受所选方向强烈支持，但为解决冲突可调整。
+- **开放（Open）**：有意交给本 skill 决定。
 
-Define semantic color roles with exact values and usage boundaries. Prefer a restrained palette, but do not impose a one-accent rule when the product needs multiple semantic statuses or the handoff confirms a broader palette.
+在起草前，把每个候选事实映射到现有归属者。确认系统必须覆盖的屏幕和共享界面；归属契约中的复用测试需要这份清单。
 
-Verify foreground/background contrast against the stated accessibility target. WCAG AA is the default minimum when no other target exists.
+若输入仍含实质上会改变设计系统的竞争性视觉方向或未决选择，停止，并把未决决策退回 `design-exploration`。不要默默选定方向。
 
-### Typography
+若只有边界内细节未定，按权威顺序解决，并在有助于未来应用时，把推理记录在相应文档中。
 
-Define practical semantic roles for display, headings, body text, labels, captions, and technical data as required by the product. Preserve confirmed type choices. Avoid generic defaults only when a more distinctive choice remains legible, available, and appropriate.
+## 阶段 2 — 划分产品界面类型
 
-### Layout and Spacing
+应用品味规则前，先划分主要界面类型：
 
-Define grid behavior, containment, max widths, gutters, spacing rhythm, density, grouping, and responsive collapse. Use tokens for reusable values instead of repeating page-specific measurements.
+- 营销或编辑型网站
+- 消费级应用
+- 桌面或生产力工具
+- 仪表盘或操作型界面
+- 游戏 UI 或 HUD
+- 包含多种界面类型的混合产品
 
-### Elevation and Shapes
+这种分类决定哪些指导相关。主视觉构图、内联编辑型图像和单一 CTA 规则只适用于营销或编辑型界面。在操作型界面中，密度、可扫读性、常驻导航、技术字体和克制动效优先。
 
-Define one consistent depth model and shape language. Explain when hierarchy uses tonal contrast, borders, negative space, shadows, texture, or elevation. Keep corner, line, icon, and container geometry coherent.
+列出系统必须覆盖的具体屏幕和共享界面。只服务其中一个屏幕的规则是页面规格，不是系统规则。只有当领域特定节通过准入测试、覆盖可复用领域而非单一屏幕时，才添加它。
 
-### Components and States
+## 阶段 3 — 确定视觉系统
 
-Define only system-level component primitives that prevent visual drift. Cover relevant default, hover, active, focus-visible, selected, disabled, loading, empty, and error behavior. States must not rely on color alone.
+从证据中综合出一套内部连贯的系统。
 
-### Responsive and Motion
+### 氛围与识别
 
-Specify responsive behavior for actual supported viewports, minimum touch targets where applicable, overflow constraints, and content-priority changes.
+陈述视觉命题、受众、情绪反应、密度、变化幅度和动效意图。说明核心视觉张力是如何解决的。
 
-Motion must communicate hierarchy, causality, continuity, or state. Prefer `transform` and `opacity` for animation performance. Persistent decorative loops are opt-in, not a universal default. Always define a `prefers-reduced-motion` behavior when motion is present.
+### 色彩
 
-### Guardrails
+定义带精确值和使用边界的语义色彩角色。优先使用克制的调色板，但当产品需要多个语义状态或交接确认了更宽的调色板时，不要强加单强调色规则。
 
-Turn relevant anti-patterns into product-specific Do's and Don'ts. Avoid generic prohibitions that do not follow from the selected direction. Each guardrail should prevent a plausible implementation drift.
+按既定的无障碍目标验证前景/背景对比度。没有其他目标时，WCAG AA 是默认最低要求。
 
-## Phase 4 — Encode the Normative Token Layer
+### 字体
 
-Follow [references/spec.md](references/spec.md) exactly.
+按产品需要，为展示、标题、正文、标签、说明和技术数据定义实用的语义角色。保留已确认的字体选择。只有在更独特的选择仍保持可读、可用且合适时，才避免通用默认字体。
 
-- Begin and end YAML frontmatter with exact `---` delimiters.
-- Use `version`, `name`, optional `description`, optional `omitted`, and supported token groups.
-- Use valid CSS colors.
-- Use only `px`, `em`, or `rem` for dimensions governed by the current specification.
-- Prefer semantic token names describing role rather than page location.
-- Use `{path.to.token}` references and ensure every reference resolves.
-- Reference composite typography values only where the specification permits it.
-- Represent intentional omissions through `omitted`; do not use omission to hide unfinished design work.
-- Keep component tokens reusable and state-oriented rather than page-specific.
+### 布局与间距
 
-Tokens are normative. When prose and token values disagree, correct the prose or tokens before delivery rather than declaring one to be approximate.
+定义网格行为、容器、最大宽度、栏间距、间距节奏、密度、分组和响应式收拢。可复用值使用令牌，不要重复页面特定测量值。
 
-## Phase 5 — Write the Semantic Guidance Layer
+### 层级与形状
 
-Use the standard sections and ordering defined by the specification. Preserve exact standard heading names. Add only the extensions the product needs, after the standard sections, such as:
+定义一个一致的深度模型和形状语言。说明层级何时使用色调对比、边框、负空间、阴影、纹理或层级。保持圆角、线条、图标和容器几何一致。
+
+### 组件与状态
+
+只定义防止视觉漂移的系统级组件原语。覆盖相关的默认、悬停、按下、焦点可见、选中、禁用、加载、空和错误状态。状态不能只依赖颜色。
+
+### 响应式与动效
+
+为实际支持的视口指定响应式行为、适用的最小触控目标和溢出约束，以及内容优先级变化。
+
+动效必须传达层级、因果关系、连续性或状态。动画性能优先使用 `transform` 和 `opacity`。常驻装饰性循环须显式启用，不是通用默认。存在动效时，始终定义 `prefers-reduced-motion` 行为。
+
+### 护栏
+
+把相关反模式转化为产品特定的 Do's and Don'ts（应做与不应做）。避免不能从所选方向推出的通用禁令。每条护栏都应能阻止一种合理的实现漂移。
+
+## 阶段 4 — 编码规范令牌层
+
+严格遵循 [references/spec.md](references/spec.md)。
+
+- 用精确的 `---` 分隔符开始和结束 YAML frontmatter。
+- 使用 `version`、`name`、可选的 `description`、可选的 `omitted` 以及受支持的令牌组。
+- 使用有效的 CSS 颜色。
+- 当前规范约束的尺寸只使用 `px`、`em` 或 `rem`。
+- 令牌名优先描述角色而非页面位置。
+- 使用 `{path.to.token}` 引用，并确保每个引用都能解析。
+- 仅在规范允许的地方引用复合字体值。
+- 用 `omitted` 表示有意省略；不要用省略掩盖未完成的设计工作。
+- 保持组件令牌可复用且面向状态，而不是面向页面。
+
+令牌是规范的。当说明文字与令牌值不一致时，在交付前修正说明文字或令牌，不要声明其中一个是近似值。
+
+## 阶段 5 — 编写语义指导层
+
+使用规范定义的标准节及顺序。保留准确的标准标题。只在标准节之后添加产品真正需要的扩展，例如：
 
 - `## Responsive Behavior`
 - `## Motion`
@@ -137,81 +181,140 @@ Use the standard sections and ordering defined by the specification. Preserve ex
 - `## Game HUD`
 - `## World-Space UI`
 
-Do not duplicate standard headings. Do not turn `DESIGN.md` into a page specification, implementation diary, or catalog of every possible component.
+不要重复标准标题。不要把 `DESIGN.md` 写成页面规格、实现日记或所有可能组件的目录。
 
-Every prose section should answer:
+扩展针对系统中可复用的维度，如图标、数据可视化或游戏 HUD 约定。它们不是添加页面走查的许可。添加扩展前，确认它通过归属契约中的每项准入测试，并确认另一文档尚未拥有该主题。在交付说明中说明产品为何需要它，以及它服务哪些屏幕。
 
-- what the design rule is
-- why it supports the selected direction
-- where it applies
-- where it must not be used
-- which exact token represents it, when applicable
+对每一节：
 
-## Phase 6 — Validate Before Delivery
+- 只要存在令牌，就通过令牌或 `{path.to.token}` 引用来表达规则
+- 省略页面名称、逐屏测量值、交互脚本、业务数值、引擎或资产参数以及验证步骤
+- 不要在扩展标题下复述标准节的主题
+- 把新规则合并进已有节，而不是为一个功能新增节
 
-### Format Validation
+每个说明文字节都应回答：
 
-- YAML is syntactically valid.
-- Frontmatter matches the current specification.
-- Token references resolve and point to permitted value types.
-- Dimensions and color values are valid.
-- Standard sections are unique and in the required order.
-- Intentional omissions are declared.
-- Unknown extension sections appear after standard sections.
+- 设计规则是什么
+- 它为何支持所选方向
+- 它适用于哪里
+- 它不得用于哪里
+- 适用时，哪个精确令牌代表它
 
-### System Validation
+## 阶段 6 — 交付前校验
 
-- The result traces directly to the selected direction and handoff.
-- Fixed user decisions remain unchanged.
-- Color, typography, layout, depth, shapes, components, responsive behavior, and motion reinforce one visual thesis.
-- Semantic prose and normative tokens agree exactly.
-- Another agent can design an unseen screen without inventing a new visual language.
-- Rules are reusable and not tied to a single prototype page.
-- Guardrails are specific enough to prevent likely AI-generated design drift.
+### 格式校验
 
-### Accessibility and Runtime Validation
+- YAML 语法有效。
+- Frontmatter 符合固定版本的规范；上游规则不同时，遵循上游并报告偏差。
+- 令牌引用可解析，且指向允许的值类型。
+- 尺寸和颜色值有效。
+- 标准节唯一且顺序正确。
+- 有意省略已声明。
+- 未知扩展节位于标准节之后。
+- 环境可安装时，官方 linter 通过：`npx -y -p "@google/design.md" designmd lint DESIGN.md`。Windows 上使用 `designmd` 别名；`design.md` 二进制名会与 Markdown 文件关联冲突，可能没有任何输出。lint error 阻止交付；对已接受的 warning 说明理由。linter 只检查结构、令牌引用和对比度；归属与范围仍需下列检查。
 
-- Text contrast meets the stated target.
-- Focus and interaction state are visible without depending only on color.
-- Text remains readable at intended sizes and densities.
-- Touch targets and responsive collapse match the supported platforms.
-- Motion includes reduced-motion behavior and avoids unnecessary continuous animation.
-- Font, image, and implementation assumptions are actually available or explicitly documented.
+### 系统校验
 
-Fix validation failures before delivery. Do not report a known-invalid `DESIGN.md` as complete.
+- 结果直接追溯到所选方向和交接。
+- 固定的用户决策保持不变。
+- 色彩、字体、布局、深度、形状、组件、响应式行为和动效共同强化一个视觉命题。
+- 语义说明文字与规范令牌完全一致。
+- 另一个代理能设计未见过的屏幕，而不发明新的视觉语言。
+- 规则可复用，不绑定单一原型页面。
+- 护栏足够具体，能阻止可能的 AI 生成设计漂移。
 
-# Existing DESIGN.md
+### 无障碍与运行时校验
 
-When a `DESIGN.md` already exists, read it before writing.
+- 文本对比度满足既定目标。
+- 焦点和交互状态可见，且不只依赖颜色。
+- 文本在预期尺寸和密度下保持可读。
+- 触控目标和响应式收拢匹配支持的平台。
+- 动效包含 reduced-motion 行为，并避免不必要的持续动画。
+- 字体、图像和实现假设实际可用或已明确记录。
 
-- For an incremental update, preserve unrelated confirmed rules and token names when they remain valid.
-- For an explicit reorientation, replace superseded rules coherently across both tokens and prose.
-- Do not leave deprecated values referenced by components.
-- Do not overwrite hand-maintained constraints merely because a taste default differs.
+### 归属与范围校验
 
-# Output Contract
+- 每一节都通过准入测试；不出现页面规格、交互脚本、业务数值、引擎或资产参数或验证清单。
+- 每条规则至少适用于两个屏幕、界面或共享状态。
+- Overview 包含范围声明，列出范围外内容并链接其拥有者。
+- `DESIGN.md` 与其他文档之间没有事实重复；每个事实要么被拥有，要么被链接，绝不复制。
+- `DESIGN.md` 已登记进项目的代理文档和文档地图（见项目集成）。
+- 文件保持接近上游示例规模（约 8–9 KB）。超过约 12 KB 时，逐节审计扩展节的跨界面复用，并在交付前把页面或领域内容移到拥有者处。该阈值是审计触发线，不是删除目标。
 
-Write the final file to the user-specified location. Otherwise use the relevant project root as `DESIGN.md`.
+交付前修复校验失败。不要把已知无效的 `DESIGN.md` 报告为完成。
 
-Deliver:
+# 已有 DESIGN.md
 
-- the completed `DESIGN.md`
-- a concise statement of which handoff or selected prototype it implements
-- any intentionally unresolved external dependency, such as an unavailable licensed font
+当 `DESIGN.md` 已存在时，在写入前阅读它、它的项目集成条目，以及拥有相邻事实的文档。
 
-Do not also create an alternative competing design-system document.
+编辑前先对每项拟议变更分类：
 
-# Failure Modes
+- **令牌或共享规则变更**：合并进已有节，同时更新受影响的令牌和说明文字。
+- **新的跨界面规则**：合并进最接近的已有节；只有当主题确实新且通过归属契约时，才添加扩展。
+- **页面规格、业务数值、实现参数或验证步骤**：移到其拥有者处；只有当设计系统需要该引用时，才从 `DESIGN.md` 链接。
+- **另一文档的重复内容**：删除并链接到拥有者。
+- **过期规则**：删除或修正；不要保留两个版本。
 
-Avoid:
+增量更新时，保留无关的已确认规则和仍然有效的令牌名。明确重新定向时，在令牌和说明文字中一致地替换被取代的规则。不要仅因品味默认值不同就覆盖手工维护的约束。不要让组件引用已废弃的值。
 
-1. accepting a handoff that still contains unresolved competing directions
-2. producing prose without normative tokens
-3. filling the schema mechanically without a coherent visual thesis
-4. treating taste defaults as stronger than confirmed user choices
-5. applying marketing Hero rules to dashboards, tools, or game HUDs
-6. banning fonts, layouts, or colors without a product-specific rationale
-7. defining continuous animation without reduced-motion behavior
-8. using different values for the same concept in prose and tokens
-9. encoding prototype-page details as system-wide primitives
-10. overwriting an existing design system without reconciling preserved constraints
+维护性更新不得因单个功能让文件变大。每次更新后运行归属、重复和规模检查；交付的文件应保持原大小或更小，除非用户明确批准增长。
+
+# 项目集成
+
+后续实现会话不会调用本 skill；它只能手动触发。用项目现有的文档结构，把 `DESIGN.md` 登记到那些会话会查看的位置。
+
+1. 编辑前阅读根 `AGENTS.md`、`docs/AGENTS.md` 和任何决策记录条目。保留其措辞、顺序和语言。
+2. 如果 `docs/AGENTS.md` 有权威或归属表，添加或更新一行：
+
+   | 位置或文档角色 | 保存的内容 | 应放在其他拥有者的内容 |
+   |---|---|---|
+   | `DESIGN.md` | 视觉语言、设计令牌与跨界面视觉规则 | 页面构图与交互、业务数值、引擎与资产参数、验证步骤、变更历史 |
+
+   其他文档链接到 `DESIGN.md`，不要复制其规则。当 `DESIGN.md` 不在项目根时，行中应写实际路径。
+
+3. 在根 `AGENTS.md` 的读取入口列表中添加或更新一条读改写说明：
+
+```
+   - 修改界面或视觉资产前先读 [DESIGN.md](DESIGN.md)：它是视觉语言与令牌的唯一权威。实现时只读此文件，禁止随意添加内容。仅在用户明确要求变更视觉规则时，调用 `design-creator` 更新此文档后重跑校验。
+```
+
+4. 如果两个文件都没有合适位置，报告缺失条目并给出规范文本。只在用户要求时创建新的根 `AGENTS.md`；不要编造无关的项目规则。
+5. 当 `DESIGN.md` 不在项目根或移动时，更新相对链接。
+6. 如果用户明确禁止编辑项目代理文件，跳过编辑，说明登记待办，并在交付说明中保留规范条目。
+
+使用项目语言；只有当项目用另一种语言编写代理规则时，才翻译规范说明。在交付中报告每项集成编辑。
+
+# 输出契约
+
+把最终文件写到用户指定位置。否则使用相关项目根下的 `DESIGN.md`。
+
+交付：
+
+- 完成的 `DESIGN.md`
+- 简要说明它实现了哪个交接或选定原型
+- 任何有意保留的外部依赖，例如无法获得的授权字体
+- 所做的项目集成编辑，或为何不需要
+- 任何从 `DESIGN.md` 路由出去的内容的目的地
+
+不要另外创建竞争性的设计系统文档。
+
+# 失败模式
+
+避免：
+
+1. 接受仍含未决竞争方向的交接
+2. 产出没有规范令牌的说明文字
+3. 没有连贯视觉命题就机械填 schema
+4. 把品味默认值置于已确认用户选择之上
+5. 把营销主视觉规则用于仪表盘、工具或游戏 HUD
+6. 没有产品特定理由就禁用字体、布局或颜色
+7. 定义持续动画却没有 reduced-motion 行为
+8. 同一概念在说明文字和令牌中使用不同值
+9. 把原型页面细节编码成系统级原语
+10. 覆盖已有设计系统却不协调保留的约束
+11. 追加页面规格、单屏规则或功能走查
+12. 复制 GDD、UI 契约、实现参照或测试文档已拥有的事实
+13. 把业务数值、引擎或资产参数或验证步骤记录成视觉规则
+14. 每个功能都让文件增长，而不是合并和修剪
+15. 不把 `DESIGN.md` 登记进项目的代理文档
+16. 用扩展节承载单个屏幕或单个功能

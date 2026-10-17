@@ -1,6 +1,7 @@
 ---
 name: project-bootstrap
 description: 在项目初始化或首次补齐协作配置时，创建项目级 AGENTS.md 与文档维护配置，安装项目级 Skill。不适用于后续编码、文档维护、工单执行等场景。
+disable-model-invocation: true
 ---
 
 # 项目协作初始化
