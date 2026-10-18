@@ -1,0 +1,15 @@
+{
+  "name": "dsh-preset-standard-zh",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "DeepSeek Harness 预设：与内置标准模式相同，但系统提示词为中文",
+  "exports": {
+    ".": "./lib/index.js"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

@@ -8,6 +8,7 @@
 - `install.ps1` — Windows 原生安装脚本，行为与 `install.sh` 一致（PowerShell 5.1+；无符号链接权限时目录降级 junction、文件降级复制）。
 - `install/` — 安装配置，目前含云端 skills 清单 `skills-cloud.list`。
 - `system/` — 各 harness 全局指令的源文件，安装到各主机、各 harness 的全局配置位置。
+- `dsh/presets/<preset-name>/` — DeepSeek Harness 的 agent 预设 bundle，内含 `cordis.patch.yml`（预设声明与插件清单）、`lib/`（预设自带的 Cordis 插件）与 `README.md`；用 `dsh plugin` 或 Harness 的插件管理安装，不由安装脚本处理。
 - `skills/<skill-name>/` — 每个 skill 一个目录，目录名与 `SKILL.md` frontmatter 的 `name` 一致（kebab-case）。
   - `SKILL.md` — 必需。frontmatter 至少含 `name` 与 `description`；`description` 决定 skill 何时被触发，需写清适用场景与不适用情形。
   - `agents/` — 各 harness 的接口元数据（如 `openai.yaml`），按需添加。
