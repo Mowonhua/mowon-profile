@@ -52,9 +52,38 @@ GLOBAL_PROMPTS=(
 
 FAILED=0
 
-log()  { printf '%s\n' "$*"; }
-warn() { FAILED=1; printf '  ! %s\n' "$*" >&2; }
-ok()   { printf '  %s\n' "$*"; }
+# ── 日志输出 ─────────────────────────────────────────────────────────
+# 颜色仅在 stdout 接终端且未设 NO_COLOR 时启用；重定向到文件时输出纯文本。
+# 符号约定：✓ 新装 · 无变化 ↻ 重定向/替换 − 清理 ! 告警（需人工处理）
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+  R=$'\033[0m' B=$'\033[1m' DIM=$'\033[2m'
+  GRN=$'\033[32m' YLW=$'\033[33m' CYN=$'\033[36m' GRY=$'\033[90m'
+else
+  R='' B='' DIM='' GRN='' YLW='' CYN='' GRY=''
+fi
+
+# 安装项分类计数，main 结尾汇总
+N_INSTALLED=0; N_UNCHANGED=0; N_UPDATED=0; N_REMOVED=0; N_WARNED=0
+
+# 分区标题：── 标题 ──────，右侧横线填充到固定总宽
+section() {
+  local label="$*" fill='' i
+  for ((i = ${#label} + 4; i < 56; i++)); do fill+="─"; done
+  printf '\n%s── %s %s%s\n' "$B$CYN" "$label" "$fill" "$R"
+}
+ok()   { N_INSTALLED=$((N_INSTALLED+1)); printf '  %s✓%s %s\n' "$GRN" "$R" "$*"; }
+keep() { N_UNCHANGED=$((N_UNCHANGED+1)); printf '  %s·%s %s\n' "$GRY" "$R" "$*"; }
+redo() { N_UPDATED=$((N_UPDATED+1)); printf '  %s↻%s %s\n' "$CYN" "$R" "$*"; }
+del()  { N_REMOVED=$((N_REMOVED+1)); printf '  %s−%s %s\n' "$YLW" "$R" "$*"; }
+warn() { N_WARNED=$((N_WARNED+1)); FAILED=1; printf '  %s!%s %s\n' "$B$YLW" "$R" "$*" >&2; }
+
+# 结尾汇总各分类计数
+summary() {
+  section 'Summary'
+  printf '  %s%s%s installed · %s%s%s unchanged · %s%s%s updated · %s%s%s removed · %s%s%s warning(s)\n' \
+    "$GRN" "$N_INSTALLED" "$R" "$GRY" "$N_UNCHANGED" "$R" "$CYN" "$N_UPDATED" "$R" \
+    "$YLW" "$N_REMOVED" "$R" "$B$YLW" "$N_WARNED" "$R"
+}
 
 # 探测当前环境能否创建软链接。Cygwin 默认会用“复制”冒充 ln -s，MSYS 亦然，
 # 必须显式 nativestrict 才能得到真实链接或失败；非 Windows 上这些变量无效果、恒成功。
@@ -120,7 +149,7 @@ make_link() {
 }
 
 install_prompts() {
-  log "== Global prompts =="
+  section "Global prompts"
   local entry src dest backup
   for entry in "${GLOBAL_PROMPTS[@]}"; do
     src="$REPO_DIR/${entry%%|*}"
@@ -130,19 +159,19 @@ install_prompts() {
       continue
     fi
     if link_points_to "$dest" "$src"; then
-      ok "= $dest already in place"
+      keep "$dest already in place"
       continue
     fi
     if [ -L "$dest" ]; then
-      rm "$dest" && make_link "$src" "$dest" && ok "~ $dest link retargeted"
+      rm "$dest" && make_link "$src" "$dest" && redo "$dest link retargeted"
       continue
     fi
     if [ -e "$dest" ]; then
       if cmp -s "$src" "$dest"; then
         if [ "$CAN_SYMLINK" -eq 1 ]; then
-          rm "$dest" && make_link "$src" "$dest" && ok "~ $dest copy replaced with link"
+          rm "$dest" && make_link "$src" "$dest" && redo "$dest copy replaced with link"
         else
-          ok "= $dest up to date (copy)"
+          keep "$dest up to date (copy)"
         fi
       else
         # 各 harness 的全局指令以仓库为单一事实源；旧文件内容可能仍有价值，原位备份后替换
@@ -152,7 +181,7 @@ install_prompts() {
       fi
       continue
     fi
-    mkdir -p "$(dirname "$dest")" && make_link "$src" "$dest" && ok "+ $dest"
+    mkdir -p "$(dirname "$dest")" && make_link "$src" "$dest" && ok "$dest"
   done
 }
 
@@ -178,7 +207,7 @@ cleanup_stale_local_skills() {
     fi
     [ "$resolved" = "$expected" ] || continue
     if rm -- "$target"; then
-      ok "- $(basename "$target") stale local skill link removed"
+      del "$(basename "$target") stale local skill link removed"
     else
       warn "could not remove stale local skill link: $target"
     fi
@@ -186,7 +215,7 @@ cleanup_stale_local_skills() {
 }
 
 install_local_skills() {
-  log "== Local skills (linked to the repo) =="
+  section "Local skills (linked to the repo)"
   if [ ! -d "$REPO_DIR/skills" ]; then
     warn "missing skills directory"
     return
@@ -203,22 +232,22 @@ install_local_skills() {
     src="$REPO_DIR/skills/$name"
     target="$AGENTS_HOME/skills/$name"
     if link_points_to "$target" "$src"; then
-      ok "= $name already in place"
+      keep "$name already in place"
       continue
     fi
     if [ -L "$target" ]; then
-      rm "$target" && make_link "$src" "$target" && ok "~ $name link retargeted"
+      rm "$target" && make_link "$src" "$target" && redo "$name link retargeted"
       continue
     fi
     if [ -e "$target" ]; then
       if diff -r "$src" "$target" >/dev/null 2>&1; then
-        rm -rf "$target" && make_link "$src" "$target" && ok "~ $name copy replaced with link"
+        rm -rf "$target" && make_link "$src" "$target" && redo "$name copy replaced with link"
       else
         warn "$name already exists with different content under $AGENTS_HOME/skills; skipped -- back it up, remove it, and re-run to take the repo version"
       fi
       continue
     fi
-    make_link "$src" "$target" && ok "+ $name"
+    make_link "$src" "$target" && ok "$name"
   done
 }
 
@@ -240,6 +269,7 @@ cloud_lock_has() {
 }
 
 install_cloud_skills() {
+  section "Cloud skills"
   if [ ! -f "$CLOUD_LIST" ]; then
     warn "cloud skill list not found: $CLOUD_LIST"
     return
@@ -248,7 +278,6 @@ install_cloud_skills() {
     warn "npx not found (Node.js required); skipping cloud skills"
     return
   fi
-  log "== Cloud skills =="
   local agent_args=()
   [ -n "$SKILLS_AGENTS" ] && agent_args=(-a "$SKILLS_AGENTS")
   local pairs
@@ -265,7 +294,7 @@ install_cloud_skills() {
       continue
     fi
     if cloud_lock_has "$name"; then
-      ok "= $name already installed"
+      keep "$name already installed"
       continue
     fi
     # 本地 skills 以软链接占据同名目录时，云端安装会覆盖仓库内容
@@ -289,13 +318,13 @@ install_cloud_skills() {
       names="${names:+$names }$s"
     done
     if out="$(npx -y skills@latest add "$repo" -g ${skill_args[@]+"${skill_args[@]}"} -y ${agent_args[@]+"${agent_args[@]}"} </dev/null 2>&1)"; then
-      ok "+ $names ($repo)"
+      ok "$names ($repo)"
     else
       # 整组失败时无法定位具体是哪个 skill 出错，退化为逐个安装以隔离问题
       warn "group install failed ($repo); retrying one by one: $names"
       for s in $(awk -F'\t' -v r="$repo" '$1==r{print $2}' "$pairs"); do
         if out="$(npx -y skills@latest add "$repo" -g -s "$s" -y ${agent_args[@]+"${agent_args[@]}"} </dev/null 2>&1)"; then
-          ok "+ $s ($repo)"
+          ok "$s ($repo)"
         else
           warn "install failed for $s ($repo); run manually: npx skills@latest add $repo -g -s $s -y"
           printf '%s\n' "$out" | tail -n 20 >&2
@@ -309,17 +338,25 @@ install_cloud_skills() {
 CAN_SYMLINK=0; can_symlink && CAN_SYMLINK=1
 
 main() {
-  log "OS: $OS"
-  log "Repo: $REPO_DIR"
-  log "Skills dir: $AGENTS_HOME/skills"
+  local title="Mowon's Profile · installer"
+  printf '%s%s%s\n' "$B" "$title" "$R"
+  printf '  %sOS%s          %s\n' "$DIM" "$R" "$OS"
+  printf '  %sRepo%s        %s\n' "$DIM" "$R" "$REPO_DIR"
+  printf '  %sSkills dir%s  %s\n' "$DIM" "$R" "$AGENTS_HOME/skills"
+  if [ "$CAN_SYMLINK" -eq 1 ]; then
+    printf '  %sSymlink%s     %savailable%s\n' "$DIM" "$R" "$GRN" "$R"
+  else
+    printf '  %sSymlink%s     %sunavailable (junction for directories, copy for files)%s\n' "$DIM" "$R" "$YLW" "$R"
+  fi
   install_prompts
   install_local_skills
   install_cloud_skills
+  summary
   if [ "$FAILED" -ne 0 ]; then
-    log "done, but some items need manual attention (see ! lines above)"
+    printf '%s✗ done; items marked %s!%s above need manual attention%s\n' "$YLW" "$R$YLW" "$B$YLW" "$R"
     exit 1
   fi
-  log "all set"
+  printf '%s✓ all set%s\n' "$B$GRN" "$R"
 }
 
 main "$@"

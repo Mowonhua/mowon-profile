@@ -34,11 +34,92 @@ $GlobalPrompts = @(
 
 $script:Failed = $false
 
-function Info([string]$Message) { Write-Output $Message }
-function Ok([string]$Message)   { Write-Output "  $Message" }
+# ── 日志输出 ─────────────────────────────────────────────
+# 中文 Windows 控制台默认按系统 ANSI（GBK）编码输出，✓/↻ 等符号会变问号，先切到 UTF-8
+try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch { }
+# 终端支持 ANSI 且未设 NO_COLOR 时输出彩色；重定向到文件或旧控制台时输出纯文本。
+# 符号约定：✓ 新装 · 无变化 ↻ 重定向/替换 − 清理 ! 告警（需人工处理）
+$script:e = [char]27
+$script:Color = -not $env:NO_COLOR -and -not [Console]::IsOutputRedirected -and (
+    $env:WT_SESSION -or $env:TERM_PROGRAM -or $env:ConEmuANSI -eq 'ON' -or
+    $env:ANSICON -or $Host.UI.SupportsVirtualTerminal)
+if ($script:Color) {
+    $script:Reset = "$script:e[0m"; $script:Bold = "$script:e[1m"; $script:Dim = "$script:e[2m]"
+    $script:Grn = "$script:e[32m"; $script:Ylw = "$script:e[33m"; $script:Cyn = "$script:e[36m"; $script:Gry = "$script:e[90m"
+} else {
+    $script:Reset = ''; $script:Bold = ''; $script:Dim = ''; $script:Grn = ''; $script:Ylw = ''; $script:Cyn = ''; $script:Gry = ''
+}
+
+# 安装项分类计数，结尾汇总
+$script:NInstalled = 0; $script:NUnchanged = 0; $script:NUpdated = 0; $script:NRemoved = 0; $script:NWarned = 0
+
+function Write-Log([string]$Message) { [Console]::Out.WriteLine($Message) }
+
+# 状态行：符号着色，正文不着色
+function Format-Status([string]$Mark, [string]$Color, [string]$Message) {
+    if ($script:Color) { return "  $Color$Mark$($script:Reset) $Message" }
+    return "  $Mark $Message"
+}
+
+# 分区标题：── 标题 ──────，右侧横线填充到固定总宽
+function Section([string]$Label) {
+    $fill = [string]'─' * [Math]::Max(0, 52 - $Label.Length)
+    Write-Log ''
+    if ($script:Color) {
+        Write-Log ("{0}{1}── {2} {3}{4}" -f $script:Bold, $script:Cyn, $Label, $fill, $script:Reset)
+    } else {
+        Write-Log ("── {0} {1}" -f $Label, $fill)
+    }
+}
+
+function Ok([string]$Message)   { $script:NInstalled++; Write-Log (Format-Status '✓' $script:Grn $Message) }
+function Keep([string]$Message) { $script:NUnchanged++; Write-Log (Format-Status '·' $script:Gry $Message) }
+function Redo([string]$Message) { $script:NUpdated++; Write-Log (Format-Status '↻' $script:Cyn $Message) }
+function Del([string]$Message)  { $script:NRemoved++; Write-Log (Format-Status '−' $script:Ylw $Message) }
 function Warn([string]$Message) {
     $script:Failed = $true
-    [Console]::Error.WriteLine("  ! $Message")
+    $script:NWarned++
+    if ($script:Color) {
+        [Console]::Error.WriteLine("  $($script:Bold)$($script:Ylw)!$($script:Reset) $Message")
+    } else {
+        [Console]::Error.WriteLine("  ! $Message")
+    }
+}
+
+function Format-Count([int]$Count, [string]$Label, [string]$Color) {
+    if ($script:Color) { return "$Color$Count$($script:Reset) $Label" }
+    return "$Count $Label"
+}
+
+# 结尾汇总各分类计数
+function Write-Summary {
+    Section 'Summary'
+    $parts = @(
+        (Format-Count $script:NInstalled 'installed' $script:Grn),
+        (Format-Count $script:NUnchanged 'unchanged' $script:Gry),
+        (Format-Count $script:NUpdated 'updated' $script:Cyn),
+        (Format-Count $script:NRemoved 'removed' $script:Ylw),
+        (Format-Count $script:NWarned 'warning(s)' "$($script:Bold)$($script:Ylw)")
+    )
+    Write-Log ('  ' + ($parts -join ' · '))
+}
+
+function Write-Verdict([string]$Mark, [string]$Color, [string]$Message) {
+    if ($script:Color) { Write-Log "$($script:Bold)$Color$Mark$($script:Reset) $Message" }
+    else { Write-Log "$Mark $Message" }
+}
+
+function Write-Header {
+    if ($script:Color) { Write-Log "$($script:Bold)Mowon's Profile · installer$($script:Reset)" }
+    else { Write-Log "Mowon's Profile · installer" }
+    Write-Log ("  {0}OS{1}          windows (PowerShell {2})" -f $script:Dim, $script:Reset, $PSVersionTable.PSVersion)
+    Write-Log ("  {0}Repo{1}        {2}" -f $script:Dim, $script:Reset, $RepoDir)
+    Write-Log ("  {0}Skills dir{1}  {2}" -f $script:Dim, $script:Reset, (Join-Path $AGENTS_HOME 'skills'))
+    if ($script:CanSymlink) {
+        Write-Log ("  {0}Symlink{1}     {2}available{3}" -f $script:Dim, $script:Reset, $script:Grn, $script:Reset)
+    } else {
+        Write-Log ("  {0}Symlink{1}     {2}unavailable (junction for directories, copy for files){3}" -f $script:Dim, $script:Reset, $script:Ylw, $script:Reset)
+    }
 }
 
 # 归一化路径用于链接指向比较：绝对化、去尾部分隔符、忽略大小写
@@ -165,10 +246,10 @@ function Test-ItemsEqual([string]$Source, [string]$Target) {
 # 单个安装项的幂等决策，行为对应 install.sh：已链接即就绪；链接指向错误则重建；
 # 内容一致的拷贝升级为链接（只能复制时保留现状）；内容不同按入口类型备份或跳过
 function Install-Entry([string]$Source, [string]$Target, [string]$Name, [switch]$BackupOnDifferent) {
-    if (Test-LinkTo $Source $Target) { Ok "= $Name already in place"; return }
+    if (Test-LinkTo $Source $Target) { Keep "$Name already in place"; return }
     if (-not (Test-EntryPresent $Target)) {
         New-Link $Source $Target | Out-Null
-        Ok "+ $Name"
+        Ok $Name
         return
     }
     $item = @(Get-Item -LiteralPath $Target -Force -ErrorAction SilentlyContinue)[0]
@@ -176,16 +257,16 @@ function Install-Entry([string]$Source, [string]$Target, [string]$Name, [switch]
         # 指向其他位置的链接，或占位但已悬空的链接（Get-Item 读不到）
         Remove-Entry $Target
         New-Link $Source $Target | Out-Null
-        Ok "~ $Name link retargeted"
+        Redo "$Name link retargeted"
         return
     }
     if (Test-ItemsEqual $Source $Target) {
         if ((Get-PredictedMode $Source) -ne 'copy') {
             Remove-Entry $Target
             New-Link $Source $Target | Out-Null
-            Ok "~ $Name copy replaced with link"
+            Redo "$Name copy replaced with link"
         } else {
-            Ok "= $Name up to date (copy)"
+            Keep "$Name up to date (copy)"
         }
         return
     }
@@ -201,7 +282,7 @@ function Install-Entry([string]$Source, [string]$Target, [string]$Name, [switch]
 }
 
 function Install-GlobalPrompts {
-    Info "== Global prompts =="
+    Section 'Global prompts'
     foreach ($entry in $GlobalPrompts) {
         $src = Join-Path $RepoDir $entry.Source
         $dest = Join-Path $HOME $entry.Dest
@@ -232,7 +313,7 @@ function Remove-StaleLocalSkillLinks([string]$SkillsRoot, [string]$AgentsSkills)
             } else {
                 [IO.File]::Delete($item.FullName)
             }
-            Ok "- $($item.Name) stale local skill link removed"
+            Del "$($item.Name) stale local skill link removed"
         } catch {
             Warn "could not remove stale local skill link: $($item.FullName): $_"
         }
@@ -240,7 +321,7 @@ function Remove-StaleLocalSkillLinks([string]$SkillsRoot, [string]$AgentsSkills)
 }
 
 function Install-LocalSkills {
-    Info "== Local skills (linked to the repo) =="
+    Section 'Local skills (linked to the repo)'
     $skillsRoot = Join-Path $RepoDir 'skills'
     if (-not (Test-Path -LiteralPath $skillsRoot -PathType Container)) {
         Warn "missing skills directory"
@@ -273,6 +354,7 @@ function Test-CloudInstalled([string]$Name) {
 }
 
 function Install-CloudSkills {
+    Section 'Cloud skills'
     if (-not (Test-Path -LiteralPath $CloudList -PathType Leaf)) {
         Warn "cloud skill list not found: $CloudList"
         return
@@ -281,7 +363,6 @@ function Install-CloudSkills {
         Warn "npx not found (Node.js required); skipping cloud skills"
         return
     }
-    Info "== Cloud skills =="
     $agentArgs = @()
     if ($SKILLS_AGENTS) { $agentArgs = @('-a', $SKILLS_AGENTS) }
     $pairs = @()
@@ -297,7 +378,7 @@ function Install-CloudSkills {
         }
         $name = $fields[1]
         if (Test-CloudInstalled $name) {
-            Ok "= $name already installed"
+            Keep "$name already installed"
             continue
         }
         # 本地 skills 以链接占据同名目录时，云端安装会覆盖仓库内容
@@ -319,14 +400,14 @@ function Install-CloudSkills {
         $joined = $names -join ' '
         $out = (& npx -y skills@latest add $repo -g @skillArgs -y @agentArgs 2>&1) | Out-String
         if ($LASTEXITCODE -eq 0) {
-            Ok "+ $joined ($repo)"
+            Ok "$joined ($repo)"
         } else {
             # 整组失败时无法定位具体是哪个 skill 出错，退化为逐个安装以隔离问题
             Warn "group install failed ($repo); retrying one by one: $joined"
             foreach ($n in $names) {
                 $out = (& npx -y skills@latest add $repo -g -s $n -y @agentArgs 2>&1) | Out-String
                 if ($LASTEXITCODE -eq 0) {
-                    Ok "+ $n ($repo)"
+                    Ok "$n ($repo)"
                 } else {
                     Warn "install failed for $n ($repo); run manually: npx skills@latest add $repo -g -s $n -y"
                     ($out -split "`r?`n" | Select-Object -Last 20) | ForEach-Object { [Console]::Error.WriteLine($_) }
@@ -336,20 +417,18 @@ function Install-CloudSkills {
     }
 }
 
-Info "OS: windows (PowerShell $($PSVersionTable.PSVersion))"
-Info "Repo: $RepoDir"
-Info "Skills dir: $(Join-Path $AGENTS_HOME 'skills')"
-
 # 链接能力只与宿主机权限有关，启动时探测一次，供各安装项复用
 $script:CanSymlink = Test-SymlinkCapable
 $script:CanJunction = if ($script:CanSymlink) { $false } else { Test-JunctionCapable }
 
+Write-Header
 Install-GlobalPrompts
 Install-LocalSkills
 Install-CloudSkills
+Write-Summary
 
 if ($script:Failed) {
-    Info "done, but some items need manual attention (see ! lines above)"
+    Write-Verdict '✗' $script:Ylw 'done; items marked ! above need manual attention'
     exit 1
 }
-Info "all set"
+Write-Verdict '✓' $script:Grn 'all set'
