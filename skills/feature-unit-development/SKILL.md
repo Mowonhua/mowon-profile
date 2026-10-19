@@ -21,7 +21,7 @@ description: 功能单元驱动开发（FUDD）。在 features/*.md 中统一维
 
 ## 执行流程
 
-1. **确定范围。** 读取 `features/README.md` 和目标模块文档，列出受影响的功能与场景。如果缺少功能文档，仅为当前范围建立最小模型。新建文档时完整复制 [目录模板](assets/features-README-template.md) 与 [模块模板](assets/feature-module-template.md) 到项目 `features/` 目录，仅替换占位项与示例；将 [项目约束](assets/AGENTS-snippet.md) 全文并入 `AGENTS.md`，已有相同约束时原位更新。
+1. **确定范围。** 读取 `features/README.md` 和目标模块文档，列出受影响的功能与场景。如果缺少功能文档，仅为当前范围建立最小模型：新建文档时完整复制 [目录模板](assets/features-README-template.md) 与 [模块模板](assets/feature-module-template.md) 到项目 `features/` 目录，仅替换占位项与示例；同时必须将 [项目约束](assets/AGENTS-snippet.md) 全文并入 `AGENTS.md`，已有相同约束时原位更新。
 2. **判定规格变化。** 对每项需求使用下表。划分功能或编写场景时，读取 [功能模型规范](references/feature-model.md)。需要系统建模或专项开发规则时，读取 [开发流程](references/development-workflow.md)。完成标准：每项需求都有明确的规格变化，或明确保持规格不变。
 3. **更新规格与实现。** 先写明已确认的功能目的和场景预期，再实现代码与测试。实现偏离已确认规格时，修复实现；需求改变时才修改规格。仅测试变更只同步当前测试引用，不产生审计记录。用户只要求讨论或评审时，交付方案后停止。
 4. **检查结果。** 使用 [追踪规范](references/traceability.md) 校验文档和引用。运行受影响的测试与项目检查。完成标准：格式无错误，引用已复核，未运行的检查已说明。

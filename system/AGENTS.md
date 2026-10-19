@@ -76,7 +76,3 @@ In repositories indexed by CodeGraph (a `.codegraph/` directory exists at the re
 
 If there is no `.codegraph/` directory, skip CodeGraph entirely — indexing is the user's decision.
 <!-- CODEGRAPH_END -->
-
-@C:\Users\h1812\.codex\RTK.md
-
-@RTK.md
