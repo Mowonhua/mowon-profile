@@ -1,6 +1,7 @@
-# 云端 skills 清单：每行 `<owner/repo> <skill-name>`，由 install.sh / install.ps1 通过
-# `npx skills@latest add <owner/repo> -g -s <skill-name>` 安装到 ~/.agents/skills。
-# skill-name 与安装后 ~/.agents/.skill-lock.json 中的键一致；以 # 开头的行为注释。
+# 云端 skills 清单：每行 `<source> <skill-name>`，由 install.sh / install.ps1 通过
+# `npx skills@latest add <source> -g -s <skill-name>` 安装到 ~/.agents/skills。
+# source 为 owner/repo 或完整 URL；skill-name 为 SKILL.md 中的 name，也是 skills CLI 安装记录的键。
+# 本仓库维护的本地 skills 不列入清单；以 # 开头的行为注释。
 Leonxlnx/taste-skill brandkit
 Leonxlnx/taste-skill design-taste-frontend
 Leonxlnx/taste-skill gpt-taste
@@ -15,7 +16,14 @@ Nanako0129/sepia sepia-refactor
 Nanako0129/sepia sepia-review
 Nanako0129/sepia sepia-write
 QingYunA/answer-me-with-html answer-me-with-html
-hardikpandya/stop-slop stop-slop
+# Brooks 系列还依赖同级 _shared/，仅安装单个 skill 目录不完整；需使用上游 scripts/install.sh 安装共享文件。
+hyhmrright/brooks-lint brooks-audit
+hyhmrright/brooks-lint brooks-debt
+hyhmrright/brooks-lint brooks-health
+hyhmrright/brooks-lint brooks-review
+hyhmrright/brooks-lint brooks-sweep
+hyhmrright/brooks-lint brooks-test
+hylarucoder/hai-stack hai-simplified-technical
 mattpocock/skills ask-matt
 mattpocock/skills code-review
 mattpocock/skills codebase-design
@@ -35,7 +43,6 @@ mattpocock/skills retro
 mattpocock/skills setup-matt-pocock-skills
 mattpocock/skills tdd
 mattpocock/skills teach
-mattpocock/skills to-questionnaire
 mattpocock/skills to-spec
 mattpocock/skills to-tickets
 mattpocock/skills triage
