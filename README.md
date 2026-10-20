@@ -1,31 +1,98 @@
 # Mowon's Profile
 
-个人 AI 配置的单一事实源：跨 harness（ZCode、Claude Code、ChatGPT 等）、跨主机同步的提示词、skills 与全局指令。
+**一处维护 AI 工作习惯，多台主机共用。**
 
-## 结构
+集中保存全局指令、本地 skills 和 DeepSeek Harness 中文预设，通过安装脚本分发到各 AI 工具的用户配置目录。
 
-| 路径 | 内容 |
+[快速安装](#快速安装) · [仓库内容](#仓库内容) · [安装行为](#安装行为) · [MIT 许可证](LICENSE)
+
+```text
+system/AGENTS.md           →  Codex · Claude Code · ZCode · Pi · DSH · Qoder CN
+skills/<name>/            →  ~/.agents/skills/
+install/skills-cloud.list →  按清单安装云端 skills
+```
+
+## 快速安装
+
+需要 Git。安装云端 skills 还需要 Node.js 和 npx。
+
+```sh
+git clone https://github.com/Mowonhua/mowon-profile.git
+cd mowon-profile
+```
+
+**Windows · PowerShell 5.1+**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+**macOS / Linux / Windows Git Bash**
+
+```sh
+./install.sh
+```
+
+安装脚本会替换目标位置的全局指令；已有不同内容时，先备份为 `<目标>.bak-<时间戳>`。脚本可重复执行，已就绪的项会跳过。
+
+## 仓库内容
+
+| 内容 | 入口 |
 | --- | --- |
-| `system/` | 全局指令源文件，如各 harness 通用的 `AGENTS.md` |
-| `skills/<name>/` | skill 集合，每个 skill 一个目录，含 `SKILL.md` |
-| `skills/deprecated/` | 归档的 skill，不安装 |
-| `dsh/presets/<preset-name>/` | DeepSeek Harness 的 agent 预设 bundle |
-| `.scratch/` | 本地草稿区，不入库 |
+| 全局指令：沟通、执行、注释与验证约定 | [system/AGENTS.md](system/AGENTS.md) |
+| 本地 skills：项目初始化、功能建模、设计与评审 | [skills/](skills/) |
+| 云端 skills：按清单从上游安装 | [install/skills-cloud.list](install/skills-cloud.list) |
+| DeepSeek Harness 标准模式中文预设 | [standard-zh](dsh/presets/standard-zh/README.md) |
 
-## 安装
+`skills/deprecated/` 保存归档 skill，不参与安装。`.scratch/` 是本地草稿区，不入库。
 
-克隆本仓库后执行 `./install.sh`（macOS / Linux / Windows Git Bash）或 `install.ps1`（Windows PowerShell 5.1+），幂等、可重复执行：
+## 安装行为
 
-| 仓库内容 | 目标位置 | 方式 |
-| --- | --- | --- |
-| `system/AGENTS.md` | `~/.zcode/AGENTS.md`、`~/.codex/AGENTS.md`、`~/.claude/CLAUDE.md`、`~/.pi/agent/AGENTS.md`、`~/.dsh/AGENTS.md`、`~/.qoder-cn/AGENTS.md` | 软链接，映射见 `install.sh` 的 `GLOBAL_PROMPTS`（`install.ps1` 同）；目标已有不同内容时先原位备份为 `<目标>.bak-<时间戳>` 再替换 |
-| `skills/<name>/` | `~/.agents/skills/<name>/` | 软链接（各 harness 共用的统一 skill 目录） |
-| `install/skills-cloud.list` 中的云端 skills | `~/.agents/skills/` | `npx skills@latest add`；已记录在 `~/.agents/.skill-lock.json` 中的自动跳过，更新用 `npx skills update` |
+全局指令和本地 skills 通过链接引用仓库源文件。修改仓库文件即可更新链接目标；Windows 文件复制降级的情况除外。
 
-两个脚本的提示信息均为英文。Windows 下创建符号链接需要管理员或开发者模式：目录链接自动降级为 junction，文件降级为复制。
+<details>
+<summary>全局指令的目标位置</summary>
 
-本地 skill 只从 `skills/` 的一级目录安装。安装脚本跳过 `deprecated` 和不含 `SKILL.md` 的目录，不递归扫描归档内容。安装前，脚本清理指向本仓库 `skills/<同名目录>`、但目标已不存在的链接。脚本保留有效链接、其他来源的链接和普通目录。
+`system/AGENTS.md` 分发到以下位置：
 
-云端 skill 的分发目标 agent 默认 `codex`（skills CLI 对这类 universal agent 只写入统一目录 `~/.agents/skills`，不改动各 harness 目录），可用 `SKILLS_AGENTS=... ./install.sh` 覆盖。按 skill 配置各模型可见性的分发暂未实现。
+| 工具 | 用户配置文件 |
+| --- | --- |
+| Codex | `~/.codex/AGENTS.md` |
+| Claude Code | `~/.claude/CLAUDE.md` |
+| ZCode | `~/.zcode/AGENTS.md` |
+| Pi | `~/.pi/agent/AGENTS.md` |
+| DeepSeek Harness | `~/.dsh/AGENTS.md` |
+| Qoder CN | `~/.qoder-cn/AGENTS.md` |
 
-`dsh/presets/` 下的预设不经过安装脚本，需要在目标机器上单独安装到 Harness 的 profile：`dsh plugin --profile <profile> add "<预设目录的绝对路径>"`，或在 Harness 的插件管理里以该目录为来源安装 bundle。各预设的说明见其目录下的 `README.md`。
+Windows 创建符号链接需要管理员权限或开发者模式。权限不足时，目录降级为 junction，文件降级为复制。两个脚本的提示信息均为英文。
+
+</details>
+
+<details>
+<summary>本地 skills 与云端 skills</summary>
+
+本地 skill 只从 `skills/` 的一级目录安装到 `~/.agents/skills/<name>/`。脚本跳过 `deprecated` 和不含 `SKILL.md` 的目录，不递归安装归档内容。
+
+安装前，脚本会清理指向本仓库 `skills/<同名目录>`、但目标已不存在的链接。有效链接、其他来源的链接和普通目录会保留。
+
+云端 skills 通过 `npx skills@latest add` 安装。脚本跳过已记录在 `~/.agents/.skill-lock.json` 中的项；更新时执行：
+
+```sh
+npx skills update
+```
+
+云端 skill 默认分发给 `codex`。这类 universal agent 共用 `~/.agents/skills`，不改动各工具的独立 skill 目录。可通过环境变量 `SKILLS_AGENTS` 覆盖目标，例如：
+
+```sh
+SKILLS_AGENTS=codex ./install.sh
+```
+
+按 skill 配置各模型可见性的分发暂未实现。
+
+</details>
+
+DeepSeek Harness 预设需要单独安装，不经过上述脚本。安装命令与依赖见 [standard-zh 说明](dsh/presets/standard-zh/README.md#安装)。
+
+## 许可证
+
+本仓库采用 [MIT 许可证](LICENSE)。通过云端清单安装的第三方 skills 遵循各自上游许可证。
