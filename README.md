@@ -14,6 +14,22 @@ install/skills-cloud.list →  按清单安装云端 skills
 
 ## 快速安装
 
+### 只安装 skills
+
+需要 Git、Node.js 和 npx。交互选择本仓库中的 skills，安装到用户级目录：
+
+```sh
+npx skills@latest add Mowonhua/mowon-profile -g
+```
+
+指定单个 skill，例如：
+
+```sh
+npx skills@latest add Mowonhua/mowon-profile -g --skill feature-unit-development
+```
+
+### 安装完整配置
+
 需要 Git。安装云端 skills 还需要 Node.js 和 npx。
 
 ```sh
