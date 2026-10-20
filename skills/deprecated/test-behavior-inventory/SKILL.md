@@ -1,6 +1,8 @@
 ---
 name: test-behavior-inventory
 description: 当用户要求盘点测试行为、审计测试覆盖、识别冗余/重复/过时的测试并清理测试套件，精简过多、过细、过度防御的测试套件，或提及 BEHAVIORS.md 与 TEST-DISPOSITION.md 时使用。产出并长期维护这两份测试治理清单，据此治理项目测试。
+metadata:
+  internal: true
 ---
 
 # 测试行为盘点与清理
