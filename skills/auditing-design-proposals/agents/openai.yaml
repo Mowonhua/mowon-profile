@@ -1,6 +1,6 @@
 interface:
   display_name: "方案文档审查"
-  short_description: "系统审查方案文档中的逻辑矛盾、设计缺漏、边界模糊和可行性风险"
+  short_description: "系统审查方案文档中的逻辑矛盾、设计缺漏、界限模糊和可行性风险"
   default_prompt: "使用 $auditing-design-proposals 审查这份方案文档并生成中文 Markdown 审查报告。"
 
 policy:
