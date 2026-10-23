@@ -16,7 +16,7 @@ disable-model-invocation: true
 
 1. **识别项目。** 读取全局指令和目标及其父目录的 `AGENTS.md`，再检查项目简介、发布契约、构建入口和现有文档。确认项目根目录、技术栈、发布阶段与规则拥有者。
 2. **确定生成范围。** 读取[适配规则](references/adaptation.md)，为每个生成文件确定目标路径。已有 `AGENTS.md` 或决策库时，再读[已有项目接入](references/existing-projects.md)。
-3. **生成项目规则。** 根据 [AGENTS.md 模板](assets/AGENTS.template.md) 写入项目事实、命令和验证条件；按[项目地图](references/project-map.md)整理关键目录、模块职责与核心概念。按[全局与项目范围](references/adaptation.md#全局与项目范围)保留项目增量。
+3. **生成项目规则。** 根据 [AGENTS.md 模板](assets/AGENTS.template.md) 写入项目事实、命令和验证条件；按[项目地图](references/project-map.md)整理关键目录与模块职责。按[全局与项目范围](references/adaptation.md#全局与项目范围)保留项目增量。
 4. **生成文档与工作流配置。** 按[文档与工作资料配置](references/adaptation.md#文档与工作资料配置)适配三份项目规则，并安装项目 Skill。
 5. **完成结构与内容检查。** 检查模板变量、相对链接、命令来源、Git 跟踪状态和全局规则的语义重复。按下方“完成条件”核对内容。
 6. **交付配置。** 报告创建和修改的文件、已确认的命令、项目地图状态及仍缺少的项目事实。
