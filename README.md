@@ -7,7 +7,7 @@
 [快速安装](#快速安装) · [仓库内容](#仓库内容) · [安装行为](#安装行为) · [MIT 许可证](LICENSE)
 
 ```text
-system/AGENTS.md           →  Codex · Claude Code · ZCode · Pi · DSH · Qoder CN
+system/AGENTS.md           →  Codex · Claude Code · ZCode · Pi · DSH · Qoder CN · Trae CN
 skills/<name>/            →  ~/.agents/skills/
 install/skills-cloud.list →  按清单安装云端 skills
 ```
@@ -79,6 +79,9 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 | Pi | `~/.pi/agent/AGENTS.md` |
 | DeepSeek Harness | `~/.dsh/AGENTS.md` |
 | Qoder CN | `~/.qoder-cn/AGENTS.md` |
+| Trae CN | `~/.trae-cn/user_rules.md` |
+
+只在工具的用户配置目录已存在时写入；目录缺失视为该工具未安装，脚本跳过该项，不会为它创建目录。
 
 Windows 创建符号链接需要管理员权限或开发者模式。权限不足时，目录降级为 junction，文件降级为复制。两个脚本的提示信息均为英文。
 

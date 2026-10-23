@@ -1,6 +1,7 @@
 ﻿# install.ps1 —— Windows 原生安装脚本，与 install.sh 行为一致：
 # 全局提示词、本仓库 skills 链接到用户级配置目录，按清单通过 skills CLI 安装云端 skills。
 # 幂等：已就绪的项原样跳过，只补齐缺失项、修正指向错误的链接，可重复执行。提示信息为英文。
+# 全局提示词只写入已存在的工具配置目录；目录缺失视为该工具未安装，跳过且不为它创建目录。
 #
 # 用法：powershell -ExecutionPolicy Bypass -File install.ps1
 # 创建符号链接需要管理员权限或已开启 Windows 开发者模式；未开启时目录链接自动降级为
@@ -22,14 +23,19 @@ $SKILLS_AGENTS = if ($env:SKILLS_AGENTS) { $env:SKILLS_AGENTS } else { 'codex' }
 # 大仓库（如 mattpocock/skills）在 skills CLI 默认克隆超时内拉不完，会导致安装失败
 $env:SKILLS_CLONE_TIMEOUT_MS = if ($env:SKILLS_CLONE_TIMEOUT_MS) { $env:SKILLS_CLONE_TIMEOUT_MS } else { '600000' }
 
-# 全局提示词映射，与 install.sh 的 GLOBAL_PROMPTS 一致
+# 全局提示词映射，与 install.sh 的 GLOBAL_PROMPTS 一致。
+# 目标路径所在目录由对应工具自己创建，因此它的存在就代表该工具已安装：
+# 目录不存在时不写入，也不替工具创建配置目录。
 $GlobalPrompts = @(
     @{ Source = 'system/AGENTS.md'; Dest = '.zcode/AGENTS.md' },
     @{ Source = 'system/AGENTS.md'; Dest = '.codex/AGENTS.md' },
     @{ Source = 'system/AGENTS.md'; Dest = '.claude/CLAUDE.md' },
     @{ Source = 'system/AGENTS.md'; Dest = '.pi/agent/AGENTS.md' },
     @{ Source = 'system/AGENTS.md'; Dest = '.dsh/AGENTS.md' },
-    @{ Source = 'system/AGENTS.md'; Dest = '.qoder-cn/AGENTS.md' }
+    @{ Source = 'system/AGENTS.md'; Dest = '.qoder-cn/AGENTS.md' },
+    # Trae CN 的“个人规则”：新版本改读 user_rules/ 目录下的多个 md，但旧版单文件
+    # user_rules.md 仍被规则服务读取；用单文件与仓库一一对应，不替换用户自建的规则目录
+    @{ Source = 'system/AGENTS.md'; Dest = '.trae-cn/user_rules.md' }
 )
 
 $script:Failed = $false
@@ -38,7 +44,7 @@ $script:Failed = $false
 # 中文 Windows 控制台默认按系统 ANSI（GBK）编码输出，✓/↻ 等符号会变问号，先切到 UTF-8
 try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch { }
 # 终端支持 ANSI 且未设 NO_COLOR 时输出彩色；重定向到文件或旧控制台时输出纯文本。
-# 符号约定：✓ 新装 · 无变化 ↻ 重定向/替换 − 清理 ! 告警（需人工处理）
+# 符号约定：✓ 新装 · 无变化 ↻ 重定向/替换 − 清理 ○ 跳过（工具未安装）! 告警（需人工处理）
 $script:e = [char]27
 $script:Color = -not $env:NO_COLOR -and -not [Console]::IsOutputRedirected -and (
     $env:WT_SESSION -or $env:TERM_PROGRAM -or $env:ConEmuANSI -eq 'ON' -or
@@ -51,7 +57,7 @@ if ($script:Color) {
 }
 
 # 安装项分类计数，结尾汇总
-$script:NInstalled = 0; $script:NUnchanged = 0; $script:NUpdated = 0; $script:NRemoved = 0; $script:NWarned = 0
+$script:NInstalled = 0; $script:NUnchanged = 0; $script:NUpdated = 0; $script:NRemoved = 0; $script:NSkipped = 0; $script:NWarned = 0
 
 function Write-Log([string]$Message) { [Console]::Out.WriteLine($Message) }
 
@@ -76,6 +82,7 @@ function Ok([string]$Message)   { $script:NInstalled++; Write-Log (Format-Status
 function Keep([string]$Message) { $script:NUnchanged++; Write-Log (Format-Status '·' $script:Gry $Message) }
 function Redo([string]$Message) { $script:NUpdated++; Write-Log (Format-Status '↻' $script:Cyn $Message) }
 function Del([string]$Message)  { $script:NRemoved++; Write-Log (Format-Status '−' $script:Ylw $Message) }
+function Skip([string]$Message) { $script:NSkipped++; Write-Log (Format-Status '○' $script:Gry $Message) }
 function Warn([string]$Message) {
     $script:Failed = $true
     $script:NWarned++
@@ -99,6 +106,7 @@ function Write-Summary {
         (Format-Count $script:NUnchanged 'unchanged' $script:Gry),
         (Format-Count $script:NUpdated 'updated' $script:Cyn),
         (Format-Count $script:NRemoved 'removed' $script:Ylw),
+        (Format-Count $script:NSkipped 'skipped' $script:Gry),
         (Format-Count $script:NWarned 'warning(s)' "$($script:Bold)$($script:Ylw)")
     )
     Write-Log ('  ' + ($parts -join ' · '))
@@ -288,6 +296,13 @@ function Install-GlobalPrompts {
         $dest = Join-Path $HOME $entry.Dest
         if (-not (Test-Path -LiteralPath $src)) {
             Warn "source file not found: $src"
+            continue
+        }
+        # 配置目录由工具自己创建，脚本不代建：没有这个目录就说明该工具没装过，
+        # 写入反而会凭空造出一个没人读的配置目录
+        $parent = [IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($dest))
+        if (-not [IO.Directory]::Exists($parent)) {
+            Skip "$dest skipped ($parent not found; tool not installed)"
             continue
         }
         Install-Entry -Source $src -Target $dest -Name $dest -BackupOnDifferent

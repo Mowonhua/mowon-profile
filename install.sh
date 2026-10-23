@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 一键安装本仓库的 AI 配置：全局提示词、本仓库 skills、云端 skills 清单。
 # 幂等：已就绪的项原样跳过，只补齐缺失项、修正指向错误的链接，可重复执行。
+# 全局提示词只写入已存在的工具配置目录；目录缺失视为该工具未安装，跳过且不为它创建目录。
 #
 # 用法：克隆本仓库后执行 ./install.sh（macOS / Linux 原生支持，Windows 在 Git Bash / MSYS2
 #       中执行；Windows 原生环境可改用行为一致的 install.ps1）。
@@ -40,7 +41,9 @@ SKILLS_AGENTS="${SKILLS_AGENTS:-codex}"
 # 大仓库（如 mattpocock/skills）在 skills CLI 默认克隆超时内拉不完，会导致安装失败
 export SKILLS_CLONE_TIMEOUT_MS="${SKILLS_CLONE_TIMEOUT_MS:-600000}"
 
-# 全局提示词映射，每项为 仓库内源文件|目标路径（相对 $HOME）
+# 全局提示词映射，每项为 仓库内源文件|目标路径（相对 $HOME）。
+# 目标路径所在目录由对应工具自己创建，因此它的存在就代表该工具已安装：
+# 目录不存在时不写入，也不替工具创建配置目录。
 GLOBAL_PROMPTS=(
   "system/AGENTS.md|.zcode/AGENTS.md"
   "system/AGENTS.md|.codex/AGENTS.md"
@@ -48,13 +51,16 @@ GLOBAL_PROMPTS=(
   "system/AGENTS.md|.pi/agent/AGENTS.md"
   "system/AGENTS.md|.dsh/AGENTS.md"
   "system/AGENTS.md|.qoder-cn/AGENTS.md"
+  # Trae CN 的“个人规则”：新版本改读 user_rules/ 目录下的多个 md，但旧版单文件
+  # user_rules.md 仍被规则服务读取；用单文件与仓库一一对应，不替换用户自建的规则目录
+  "system/AGENTS.md|.trae-cn/user_rules.md"
 )
 
 FAILED=0
 
 # ── 日志输出 ─────────────────────────────────────────────────────────
 # 颜色仅在 stdout 接终端且未设 NO_COLOR 时启用；重定向到文件时输出纯文本。
-# 符号约定：✓ 新装 · 无变化 ↻ 重定向/替换 − 清理 ! 告警（需人工处理）
+# 符号约定：✓ 新装 · 无变化 ↻ 重定向/替换 − 清理 ○ 跳过（工具未安装）! 告警（需人工处理）
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
   R=$'\033[0m' B=$'\033[1m' DIM=$'\033[2m'
   GRN=$'\033[32m' YLW=$'\033[33m' CYN=$'\033[36m' GRY=$'\033[90m'
@@ -63,7 +69,7 @@ else
 fi
 
 # 安装项分类计数，main 结尾汇总
-N_INSTALLED=0; N_UNCHANGED=0; N_UPDATED=0; N_REMOVED=0; N_WARNED=0
+N_INSTALLED=0; N_UNCHANGED=0; N_UPDATED=0; N_REMOVED=0; N_SKIPPED=0; N_WARNED=0
 
 # 分区标题：── 标题 ──────，右侧横线填充到固定总宽
 section() {
@@ -75,14 +81,15 @@ ok()   { N_INSTALLED=$((N_INSTALLED+1)); printf '  %s✓%s %s\n' "$GRN" "$R" "$*
 keep() { N_UNCHANGED=$((N_UNCHANGED+1)); printf '  %s·%s %s\n' "$GRY" "$R" "$*"; }
 redo() { N_UPDATED=$((N_UPDATED+1)); printf '  %s↻%s %s\n' "$CYN" "$R" "$*"; }
 del()  { N_REMOVED=$((N_REMOVED+1)); printf '  %s−%s %s\n' "$YLW" "$R" "$*"; }
+skip() { N_SKIPPED=$((N_SKIPPED+1)); printf '  %s○%s %s\n' "$GRY" "$R" "$*"; }
 warn() { N_WARNED=$((N_WARNED+1)); FAILED=1; printf '  %s!%s %s\n' "$B$YLW" "$R" "$*" >&2; }
 
 # 结尾汇总各分类计数
 summary() {
   section 'Summary'
-  printf '  %s%s%s installed · %s%s%s unchanged · %s%s%s updated · %s%s%s removed · %s%s%s warning(s)\n' \
+  printf '  %s%s%s installed · %s%s%s unchanged · %s%s%s updated · %s%s%s removed · %s%s%s skipped · %s%s%s warning(s)\n' \
     "$GRN" "$N_INSTALLED" "$R" "$GRY" "$N_UNCHANGED" "$R" "$CYN" "$N_UPDATED" "$R" \
-    "$YLW" "$N_REMOVED" "$R" "$B$YLW" "$N_WARNED" "$R"
+    "$YLW" "$N_REMOVED" "$R" "$GRY" "$N_SKIPPED" "$R" "$B$YLW" "$N_WARNED" "$R"
 }
 
 # 探测当前环境能否创建软链接。Cygwin 默认会用“复制”冒充 ln -s，MSYS 亦然，
@@ -150,12 +157,19 @@ make_link() {
 
 install_prompts() {
   section "Global prompts"
-  local entry src dest backup
+  local entry src dest backup parent
   for entry in "${GLOBAL_PROMPTS[@]}"; do
     src="$REPO_DIR/${entry%%|*}"
     dest="$HOME/${entry#*|}"
     if [ ! -e "$src" ]; then
       warn "source file not found: $src"
+      continue
+    fi
+    parent="$(dirname "$dest")"
+    # 配置目录由工具自己创建，脚本不代建：没有这个目录就说明该工具没装过，
+    # 写入反而会凭空造出一个没人读的配置目录
+    if [ ! -d "$parent" ]; then
+      skip "$dest skipped ($parent not found; tool not installed)"
       continue
     fi
     if link_points_to "$dest" "$src"; then
@@ -181,7 +195,7 @@ install_prompts() {
       fi
       continue
     fi
-    mkdir -p "$(dirname "$dest")" && make_link "$src" "$dest" && ok "$dest"
+    make_link "$src" "$dest" && ok "$dest"
   done
 }
 
