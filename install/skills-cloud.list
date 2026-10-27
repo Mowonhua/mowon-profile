@@ -2,13 +2,7 @@
 # `npx skills@latest add <source> -g -s <skill-name>` 安装到 ~/.agents/skills。
 # source 为 owner/repo 或完整 URL；skill-name 为 SKILL.md 中的 name，也是 skills CLI 安装记录的键。
 # 本仓库维护的本地 skills 不列入清单；以 # 开头的行为注释。
-Leonxlnx/taste-skill brandkit
 Leonxlnx/taste-skill design-taste-frontend
-Leonxlnx/taste-skill gpt-taste
-Leonxlnx/taste-skill high-end-visual-design
-Leonxlnx/taste-skill industrial-brutalist-ui
-Leonxlnx/taste-skill minimalist-ui
-Leonxlnx/taste-skill redesign-existing-projects
 MiniMax-AI/MiniMax-Music3 music-caption-rewriter
 Nanako0129/sepia sepia
 Nanako0129/sepia sepia-recreate
