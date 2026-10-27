@@ -349,6 +349,58 @@ install_cloud_skills() {
   rm -f "$pairs"
 }
 
+# 清单不完整时不能判断哪些技能多余；只识别一级目录中含 SKILL.md 的技能。
+cleanup_unlisted_skills() {
+  section 'Unlisted skills'
+  local root="$AGENTS_HOME/skills" src name source target chosen rc
+  if [ ! -f "$CLOUD_LIST" ] || [ ! -d "$REPO_DIR/skills" ]; then
+    warn 'skill lists unavailable; skipping cleanup'
+    return
+  fi
+  local names=() candidates=()
+  for src in "$REPO_DIR"/skills/*/; do
+    [ -f "$src/SKILL.md" ] || continue
+    name="$(basename "$src")"
+    [ "$name" = deprecated ] || names+=("$name")
+  done
+  while read -r source name _; do
+    source="${source%$'\r'}"; name="${name%$'\r'}"
+    case "$source" in ''|'#'*) continue ;; esac
+    if [ -z "$name" ]; then warn 'invalid cloud skill list; skipping cleanup'; return; fi
+    names+=("$name")
+  done < "$CLOUD_LIST"
+  for target in "$root"/*; do
+    [ -f "$target/SKILL.md" ] || continue
+    name="$(basename "$target")"
+    local listed=0 n
+    for n in "${names[@]}"; do [ "$name" = "$n" ] && listed=1 && break; done
+    [ "$listed" -eq 1 ] || candidates+=("$target")
+  done
+  if [ "${#candidates[@]}" -eq 0 ]; then keep 'no unlisted skills'; return; fi
+  if [ ! -t 0 ]; then skip 'cleanup requires interactive input'; return; fi
+  # skills CLI 的全局目录固定在 HOME 下，不接受 AGENTS_HOME 覆盖。
+  if [ "$(realpath_posix "$AGENTS_HOME")" != "$(realpath_posix "$HOME/.agents")" ]; then
+    warn 'skills CLI cannot remove from a custom AGENTS_HOME; skipping cleanup'
+    return
+  fi
+  if ! command -v npx >/dev/null 2>&1 || ! command -v node >/dev/null 2>&1; then warn 'node and npx required; skipping cleanup'; return; fi
+  local candidate_names=() selected=()
+  for target in "${candidates[@]}"; do candidate_names+=("$(basename "$target")"); done
+  local selector="$REPO_DIR/install/select-skills.cjs"
+  command -v cygpath >/dev/null 2>&1 && selector="$(cygpath -w "$selector")"
+  chosen="$(node "$selector" "${candidate_names[@]}")"; rc=$?
+  if [ "$rc" -eq 2 ]; then skip 'cleanup cancelled'; return; fi
+  if [ "$rc" -ne 0 ]; then warn 'skill selection failed'; return; fi
+  while IFS= read -r name; do [ -n "$name" ] && selected+=("$name"); done <<< "$chosen"
+  if [ "${#selected[@]}" -eq 0 ]; then skip 'no skills selected'; return; fi
+  npx -y skills@latest remove "${selected[@]}" -g -y </dev/null; rc=$?
+  for name in "${selected[@]}"; do
+    target="$root/$name"
+    if [ "$rc" -eq 0 ] && [ ! -e "$target" ] && [ ! -L "$target" ]; then del "$name removed"
+    else warn "could not remove $name with skills CLI"; fi
+  done
+}
+
 CAN_SYMLINK=0; can_symlink && CAN_SYMLINK=1
 
 main() {
@@ -365,6 +417,7 @@ main() {
   install_prompts
   install_local_skills
   install_cloud_skills
+  cleanup_unlisted_skills
   summary
   if [ "$FAILED" -ne 0 ]; then
     printf '%s✗ done; items marked %s!%s above need manual attention%s\n' "$YLW" "$R$YLW" "$B$YLW" "$R"

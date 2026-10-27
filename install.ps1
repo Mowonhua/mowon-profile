@@ -81,7 +81,7 @@ function Section([string]$Label) {
 function Ok([string]$Message)   { $script:NInstalled++; Write-Log (Format-Status '✓' $script:Grn $Message) }
 function Keep([string]$Message) { $script:NUnchanged++; Write-Log (Format-Status '·' $script:Gry $Message) }
 function Redo([string]$Message) { $script:NUpdated++; Write-Log (Format-Status '↻' $script:Cyn $Message) }
-function Del([string]$Message)  { $script:NRemoved++; Write-Log (Format-Status '−' $script:Ylw $Message) }
+function Write-Removed([string]$Message) { $script:NRemoved++; Write-Log (Format-Status '−' $script:Ylw $Message) }
 function Skip([string]$Message) { $script:NSkipped++; Write-Log (Format-Status '○' $script:Gry $Message) }
 function Warn([string]$Message) {
     $script:Failed = $true
@@ -328,7 +328,7 @@ function Remove-StaleLocalSkillLinks([string]$SkillsRoot, [string]$AgentsSkills)
             } else {
                 [IO.File]::Delete($item.FullName)
             }
-            Del "$($item.Name) stale local skill link removed"
+            Write-Removed "$($item.Name) stale local skill link removed"
         } catch {
             Warn "could not remove stale local skill link: $($item.FullName): $_"
         }
@@ -432,6 +432,52 @@ function Install-CloudSkills {
     }
 }
 
+function Remove-UnlistedSkills {
+    Section 'Unlisted skills'
+    $skillsRoot = Join-Path $RepoDir 'skills'
+    $agentsSkills = Join-Path $AGENTS_HOME 'skills'
+    if (-not (Test-Path -LiteralPath $CloudList -PathType Leaf) -or -not (Test-Path -LiteralPath $skillsRoot -PathType Container)) {
+        Warn 'skill lists unavailable; skipping cleanup'
+        return
+    }
+    $names = @{}
+    foreach ($dir in (Get-ChildItem -LiteralPath $skillsRoot -Directory)) {
+        if ($dir.Name -ne 'deprecated' -and (Test-Path -LiteralPath (Join-Path $dir.FullName 'SKILL.md') -PathType Leaf)) { $names[$dir.Name] = $true }
+    }
+    foreach ($line in (Get-Content -LiteralPath $CloudList -Encoding UTF8)) {
+        $text = $line.Trim()
+        if (-not $text -or $text.StartsWith('#')) { continue }
+        $fields = $text -split '\s+'
+        if ($fields.Count -lt 2) { Warn 'invalid cloud skill list; skipping cleanup'; return }
+        $names[$fields[1]] = $true
+    }
+    $candidates = @(Get-ChildItem -LiteralPath $agentsSkills -Force | Where-Object {
+        -not $names.ContainsKey($_.Name) -and (Test-Path -LiteralPath (Join-Path $_.FullName 'SKILL.md') -PathType Leaf)
+    } | Sort-Object Name)
+    if ($candidates.Count -eq 0) { Keep 'no unlisted skills'; return }
+    if ([Console]::IsInputRedirected) { Skip 'cleanup requires interactive input'; return }
+    # skills CLI 的全局目录固定在用户主目录下，不接受 AGENTS_HOME 覆盖。
+    if ((Get-NormalizedPath $AGENTS_HOME) -ne (Get-NormalizedPath (Join-Path $HOME '.agents'))) {
+        Warn 'skills CLI cannot remove from a custom AGENTS_HOME; skipping cleanup'
+        return
+    }
+    if (-not (Get-Command npx -ErrorAction SilentlyContinue) -or -not (Get-Command node -ErrorAction SilentlyContinue)) {
+        Warn 'node and npx required; skipping cleanup'; return
+    }
+    $candidateNames = @($candidates | ForEach-Object { $_.Name })
+    $selected = @(& node (Join-Path $RepoDir 'install/select-skills.cjs') @candidateNames)
+    if ($LASTEXITCODE -eq 2) { Skip 'cleanup cancelled'; return }
+    if ($LASTEXITCODE -ne 0) { Warn 'skill selection failed'; return }
+    if ($selected.Count -eq 0) { Skip 'no skills selected'; return }
+    & npx -y skills@latest remove @selected -g -y
+    $removeResult = $LASTEXITCODE
+    foreach ($name in $selected) {
+        if ($removeResult -eq 0 -and -not (Test-EntryPresent (Join-Path $agentsSkills $name))) {
+            Write-Removed "$name removed"
+        } else { Warn "could not remove $name with skills CLI" }
+    }
+}
+
 # 链接能力只与宿主机权限有关，启动时探测一次，供各安装项复用
 $script:CanSymlink = Test-SymlinkCapable
 $script:CanJunction = if ($script:CanSymlink) { $false } else { Test-JunctionCapable }
@@ -440,6 +486,7 @@ Write-Header
 Install-GlobalPrompts
 Install-LocalSkills
 Install-CloudSkills
+Remove-UnlistedSkills
 Write-Summary
 
 if ($script:Failed) {
