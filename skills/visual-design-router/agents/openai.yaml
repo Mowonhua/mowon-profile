@@ -1,7 +1,0 @@
-interface:
-  display_name: "视觉设计路由"
-  short_description: "根据任务和既有设计约束，按需选择并读取视觉风格、品牌或重设计技能"
-  default_prompt: "使用 $visual-design-router 为当前任务选择合适的设计技能并继续执行。"
-
-policy:
-  allow_implicit_invocation: true
