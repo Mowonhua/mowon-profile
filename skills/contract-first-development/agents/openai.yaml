@@ -1,0 +1,11 @@
+interface:
+  display_name: "契约先行开发"
+  short_description: "先确定契约与归属，再逐个模块实现，交付前自检"
+  default_prompt: "使用 $contract-first-development 先确定契约与归属，再逐个模块实现，交付前完成自检。"
+policy:
+  products:
+    - "chatgpt"
+    - "codex"
+    - "api"
+    - "atlas"
+  allow_implicit_invocation: true
