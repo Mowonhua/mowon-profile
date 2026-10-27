@@ -403,6 +403,19 @@ cleanup_unlisted_skills() {
 
 CAN_SYMLINK=0; can_symlink && CAN_SYMLINK=1
 
+# Windows 下重新启动当前 Bash，保留其环境和安装路径；提权失败时继续使用原有降级方式。
+# 标记仅由提权后的进程设置，避免管理员仍无法创建链接时反复请求提权。
+if [ "$OS" = windows ] && [ "$CAN_SYMLINK" -eq 0 ] && [ "${INSTALL_ELEVATED:-0}" != 1 ] \
+   && command -v powershell.exe >/dev/null 2>&1 && command -v cygpath >/dev/null 2>&1; then
+  export HOME AGENTS_HOME SKILLS_AGENTS
+  export INSTALL_BASH_PATH="$(cygpath -w "$(command -v bash)")"
+  export INSTALL_SCRIPT_PATH="$(cygpath -w "$REPO_DIR/install.sh")"
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(cygpath -w "$REPO_DIR/install/elevate-bash.ps1")"
+  elevation_rc=$?
+  if [ "$elevation_rc" -ne 125 ]; then exit "$elevation_rc"; fi
+  printf '%s\n' 'Elevation was cancelled or unavailable; continuing with link fallbacks.' >&2
+fi
+
 main() {
   local title="Mowon's Profile · installer"
   printf '%s%s%s\n' "$B" "$title" "$R"

@@ -4,8 +4,8 @@
 # 全局提示词只写入已存在的工具配置目录；目录缺失视为该工具未安装，跳过且不为它创建目录。
 #
 # 用法：powershell -ExecutionPolicy Bypass -File install.ps1
-# 创建符号链接需要管理员权限或已开启 Windows 开发者模式；未开启时目录链接自动降级为
-# junction，文件降级为复制——降级顺序与 install.sh 的 make_link 一致。
+# 创建符号链接需要管理员权限或已开启 Windows 开发者模式；权限不足时请求提权，
+# 未能提权则目录链接降级为 junction，文件降级为复制。
 #
 # 环境变量与 install.sh 相同：
 #   AGENTS_HOME              覆盖 skills 统一目录（默认 $HOME\.agents，skills CLI 约定）
@@ -478,8 +478,23 @@ function Remove-UnlistedSkills {
     }
 }
 
-# 链接能力只与宿主机权限有关，启动时探测一次，供各安装项复用
+# 仅在当前进程无法创建符号链接时请求提权；取消或无法启动时保留原有降级路径。
+# 提权进程在新窗口中运行，等待其结束并返回相同的退出码，避免父进程重复安装。
 $script:CanSymlink = Test-SymlinkCapable
+$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+$isAdministrator = (New-Object Security.Principal.WindowsPrincipal($identity)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $script:CanSymlink -and -not $isAdministrator) {
+    try {
+        $exe = (Get-Process -Id $PID).Path
+        $encodedPath = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($PSCommandPath))
+        $command = "& ([Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('$encodedPath'))); exit `$LASTEXITCODE"
+        $encodedCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
+        $process = Start-Process -FilePath $exe -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', $encodedCommand -Verb RunAs -Wait -PassThru -ErrorAction Stop
+        exit $process.ExitCode
+    } catch {
+        [Console]::Error.WriteLine('Elevation was cancelled or unavailable; continuing with link fallbacks.')
+    }
+}
 $script:CanJunction = if ($script:CanSymlink) { $false } else { Test-JunctionCapable }
 
 Write-Header
