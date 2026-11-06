@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Menu Glide Motion 可运行示例</title>
+  <link rel="stylesheet" href="./menu-glide.css" />
+  <script src="./menu-glide.js" defer></script>
+</head>
+<body>
+  <main class="page">
+    <div class="eyebrow">INTERACTION STUDY / 01</div>
+    <h1>丝滑菜单高亮</h1>
+    <div class="demo">
+      <div class="menu-shell">
+        <div class="glide-menu" data-glide-menu role="menu" aria-label="选择工作区" tabindex="-1">
+          <span data-glide-layer class="glide-layer" aria-hidden="true"></span>
+          <button class="glide-item" data-glide-item type="button" role="menuitemradio" aria-checked="false">
+            <span class="symbol">◧</span><span class="label" data-label="产品计划">产品计划</span><span class="shortcut">⌘1</span>
+          </button>
+          <button class="glide-item" data-glide-item type="button" role="menuitemradio" aria-checked="true">
+            <span class="symbol">◇</span><span class="label" data-label="界面设计">界面设计</span><span class="shortcut">⌘2</span>
+          </button>
+          <button class="glide-item" data-glide-item type="button" role="menuitemradio" aria-checked="false">
+            <span class="symbol">▣</span><span class="label" data-label="研发任务">研发任务</span><span class="shortcut">⌘3</span>
+          </button>
+          <div class="separator" role="separator" aria-hidden="true"></div>
+          <button class="glide-item" data-glide-item type="button" role="menuitemradio" aria-checked="false">
+            <span class="symbol">⌁</span><span class="label" data-label="质量测试">质量测试</span><span class="shortcut">⌘4</span>
+          </button>
+          <button class="glide-item" data-glide-item type="button" role="menuitemradio" aria-checked="false">
+            <span class="symbol">▤</span><span class="label" data-label="设计文档">设计文档</span><span class="shortcut">⌘5</span>
+          </button>
+          <button class="glide-item" data-glide-item type="button" role="menuitemradio" aria-checked="false" aria-disabled="true" tabindex="-1">
+            <span class="symbol">⊘</span><span class="label" data-label="归档空间">归档空间</span><span class="shortcut">不可用</span>
+          </button>
+        </div>
+      </div>
+      <div class="demo-foot">当前选中：<strong id="selected-label">界面设计</strong></div>
+    </div>
+  </main>
+</body>
+</html>

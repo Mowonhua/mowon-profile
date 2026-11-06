@@ -1,0 +1,7 @@
+interface:
+  display_name: "丝滑菜单高亮跟随"
+  short_description: "实现或修复菜单共享高亮层的跟随动效，处理闪烁、跳变、拖尾和滚动错位"
+  default_prompt: "使用 $menu-glide-motion 为当前菜单实现共享高亮跟随动效，并完成交互语义与性能验收。"
+
+policy:
+  allow_implicit_invocation: false

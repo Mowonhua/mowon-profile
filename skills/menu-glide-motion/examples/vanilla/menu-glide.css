@@ -1,0 +1,59 @@
+:root {
+  color-scheme: light;
+  --motion-instant: 80ms;
+  --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --menu-hover: #e8e9ed;
+  --ink: #262a32;
+  --muted: #848a96;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: #f6f7f9;
+  color: var(--ink);
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; }
+button { font: inherit; }
+.page { max-width: 660px; margin: 9vh auto; padding: 24px; }
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .14em; color: #8d95a3; }
+h1 { margin: 14px 0 12px; letter-spacing: -.04em; font-size: clamp(30px, 5vw, 44px); }
+.intro { color: #676e7a; line-height: 1.8; max-width: 560px; font-size: 14px; }
+.demo { margin-top: 38px; background: white; border: 1px solid #e6e8ec; border-radius: 19px; overflow: hidden; box-shadow: 0 20px 55px rgba(29,36,59,.055); }
+.demo-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid #f0f1f3; }
+.demo-name { font-size: 13px; font-weight: 600; }
+.demo-key { font-size: 11px; color: #9398a3; letter-spacing: .02em; }
+.menu-shell { width: 100%; padding: 22px; display: flex; justify-content: center; }
+.glide-menu { position: relative; isolation: isolate; width: 290px; padding: 6px; border: 1px solid #e7e8ed; border-radius: 14px; background: #fff; box-shadow: 0 14px 35px rgba(24,31,54,.09); }
+.glide-layer { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; width: 0; height: 0; opacity: 0; border-radius: 8px; background: var(--menu-hover); transform: translate3d(0, 0, 0); }
+.glide-item { position: relative; z-index: 1; display: flex; align-items: center; width: 100%; height: 36px; gap: 11px; border: 0; border-radius: 8px; padding: 0 11px; color: var(--ink); background: transparent; text-align: left; cursor: default; white-space: nowrap; outline: none; }
+.glide-item .symbol { color: #858b98; width: 15px; text-align: center; font-size: 17px; flex: 0 0 15px; transition: color var(--motion-instant) var(--motion-ease-out); }
+.glide-item .label { display: inline-flex; flex-direction: column; font-size: 13px; font-weight: 400; line-height: 1.45; transition: font-weight var(--motion-instant) var(--motion-ease-out); }
+/* 隐形较粗文本预留宽度，避免高亮加粗后造成布局移动 */
+.glide-item .label::after { content: attr(data-label); display: block; visibility: hidden; height: 0; overflow: hidden; font-weight: 500; white-space: nowrap; }
+.glide-item .shortcut { margin-left: auto; font-size: 11px; color: #a3a8b1; }
+.glide-item[data-glide-active] .label,
+.glide-item[aria-checked="true"] .label { font-weight: 500; }
+.glide-item[data-glide-active] .symbol { color: #444a55; }
+.glide-item[aria-checked="true"] .shortcut { color: #69717d; }
+.glide-item[aria-checked="true"] .shortcut::before { content: '✓ '; color: #57616f; }
+.glide-item[aria-disabled="true"] { opacity: .38; cursor: not-allowed; }
+.glide-item:focus-visible { outline: 2px solid #7b96d3; outline-offset: -2px; }
+.separator { margin: 6px 9px; height: 1px; background: #e9ebee; }
+.demo-foot { border-top: 1px solid #f0f1f3; padding: 14px 22px; color: #888d98; font-size: 12px; }
+.demo-foot strong { margin-left: 4px; color: #424752; }
+.hint { font-size: 12px; margin-top: 20px; line-height: 1.7; color: #969ca7; }
+@media (prefers-reduced-motion: reduce) {
+  :root { --motion-instant: 0ms; }
+  .glide-item .label, .glide-item .symbol, .glide-layer { transition: none !important; }
+}
+@media (prefers-color-scheme: dark) {
+  :root { color-scheme: dark; --menu-hover:#383b42; --ink:#e1e3e8; background: #1f2024; }
+  .eyebrow { color:#8f97a6; }
+  .intro { color:#a2a8b4; }
+  .demo { background:#27292f; border-color:#3a3d46; box-shadow:0 20px 55px rgba(0,0,0,.13); }
+  .demo-head, .demo-foot { border-color:#393c44; }
+  .demo-foot strong { color:#d4d7df; }
+  .glide-menu { background:#2b2d33; border-color:#43464e; box-shadow: 0 14px 35px rgba(0,0,0,.2); }
+  .glide-item .symbol { color:#9ea4b0; }
+  .glide-item[data-glide-active] .symbol { color:#dadde4; }
+  .separator { background:#43464e; }
+}
