@@ -1,13 +1,10 @@
 # 全局提示词分发清单。每行一项，字段用 | 分隔：
 #   <harness>|<目标路径，相对 $HOME>|<片段，逗号分隔，可空>
 # harness 名同时是 system/harness/<key>.md 与 system/composed/<key>.md 的文件名。
-# 片段来自 system/fragments/<name>.md，按这里的顺序拼接；片段与 harness 文件都是空文件时，
+# 片段来自 system/fragments/<name>.md，按行内的顺序拼接；片段与 harness 文件都是空文件时，
 # 目标直接链接 system/AGENTS.md。组合机制见 system/README.md。
 # 目标路径所在目录由对应工具自己创建，目录不存在时安装脚本跳过该项。
 
-# codegraph 段只给注册了 CodeGraph MCP 的 harness：codex、claude、pi、zcode、dsh。
-# qoder-cn 里该 MCP 存在但被禁用，trae-cn 未配置，两者不要。
-# 片段按行内的顺序拼接，codex 上行保持原全文里的先后关系：反防御性写作在前，CodeGraph 在后。
 codex|.codex/AGENTS.md|anti-defensive-writing,codegraph
 claude|.claude/CLAUDE.md|codegraph
 zcode|.zcode/AGENTS.md|codegraph
