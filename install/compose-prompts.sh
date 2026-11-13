@@ -46,22 +46,23 @@ compose_prompt() { # <repo> <key> <frags>
   tmp="$repo/system/.compose-$key.tmp$$"
   : >"$tmp" || return 1
   compose_append "$repo/$COMPOSE_COMMON" "$tmp" || { rm -f "$tmp"; return 1; }
-  # 片段按清单里的声明顺序追加，harness 专属文件最后
+  # 片段按清单里的声明顺序追加，harness 专属文件最后。
+  # 空文件是占位，不算定制：只有写进内容才会生成本 harness 的产物。
   parts=0
   old_ifs="$IFS"
   IFS=,
   for frag in $frags; do
     part="$repo/system/fragments/$frag.md"
-    if [ -f "$part" ]; then
+    if [ -s "$part" ]; then
       printf '\n' >>"$tmp"
       compose_append "$part" "$tmp" || { rm -f "$tmp"; return 1; }
       parts=$((parts + 1))
-    else
+    elif [ ! -e "$part" ]; then
       compose_warn "fragment not found: system/fragments/$frag.md (referenced by $key)"
     fi
   done
   IFS="$old_ifs"
-  if [ -f "$repo/system/harness/$key.md" ]; then
+  if [ -s "$repo/system/harness/$key.md" ]; then
     printf '\n' >>"$tmp"
     compose_append "$repo/system/harness/$key.md" "$tmp" || { rm -f "$tmp"; return 1; }
     parts=$((parts + 1))

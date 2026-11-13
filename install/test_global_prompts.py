@@ -63,12 +63,15 @@ class GlobalPromptsTests(unittest.TestCase):
         # 刻意不带尾换行：组合必须补上，否则下一个文件会被粘在同一行
         self.write("system/fragments/beta.md", "# beta")
         self.write("system/harness/pi.md", "# pi\n")
+        # 空文件是占位，不该被当成定制内容
+        self.write("system/fragments/placeholder.md", "")
+        self.write("system/harness/codex.md", "")
         for name in (".pi", ".codex", ".ghost"):
             (self.home / name).mkdir(parents=True)
         self.set_list(
             "# 清单注释",
             "pi|.pi/AGENTS.md|alpha,beta",
-            "codex|.codex/AGENTS.md",
+            "codex|.codex/AGENTS.md|placeholder",
             "",
             "ghost|.ghost/AGENTS.md|missing",
         )
@@ -142,6 +145,7 @@ exit "$FAILED"
         self.assert_linked(self.home / ".ghost/AGENTS.md", common)
         self.assert_composed("pi", "# common\n\n# alpha\n\n# beta\n\n# pi\n")
         self.assertFalse((self.repo / "system/composed/ghost.md").exists())
+        self.assertFalse((self.repo / "system/composed/codex.md").exists())
 
         # 重复执行不重写产物；清单外的遗留产物被清理
         self.write("system/composed/orphan.md", "# orphan\n")
@@ -157,9 +161,9 @@ exit "$FAILED"
         self.assert_linked(self.home / ".pi/AGENTS.md", composed_pi)
         self.assertEqual((self.home / ".codex/AGENTS.md").read_text(encoding="utf-8"), "# common v2\n")
 
-        # 定制被删除后：产物清理，目标回指通用文件
-        (self.repo / "system/harness/pi.md").unlink()
-        self.set_list("pi|.pi/AGENTS.md", "codex|.codex/AGENTS.md")
+        # 定制被清空后：产物清理，目标回指通用文件
+        (self.repo / "system/harness/pi.md").write_text("", encoding="utf-8")
+        self.set_list("pi|.pi/AGENTS.md", "codex|.codex/AGENTS.md|placeholder")
         self.run_installer(shell, powershell)
         self.assertFalse(composed_pi.exists())
         self.assert_linked(self.home / ".pi/AGENTS.md", common)

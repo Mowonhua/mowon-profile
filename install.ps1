@@ -58,6 +58,12 @@ function Get-PromptPart([string]$Path) {
     return $text
 }
 
+# 文件存在且非空：空文件是占位，不该被算作定制内容
+function Test-PromptContent([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $false }
+    return (Get-Item -LiteralPath $Path -Force).Length -gt 0
+}
+
 # 组合单个 harness，返回 changed / unchanged / removed / none。
 # 片段文件缺失只告警不中止：一处笔误不该让整个安装失败，其余部分照常组合。
 function Update-PromptArtifact($Entry) {
@@ -67,14 +73,14 @@ function Update-PromptArtifact($Entry) {
         $name = $name.Trim()
         if (-not $name) { continue }
         $fragment = Join-Path $RepoDir ('system/fragments/' + $name + '.md')
-        if (Test-Path -LiteralPath $fragment -PathType Leaf) {
+        if (Test-PromptContent $fragment) {
             $parts += $fragment
-        } else {
+        } elseif (-not (Test-Path -LiteralPath $fragment)) {
             Warn "fragment not found: system/fragments/$name.md (referenced by $($Entry.Key))"
         }
     }
     $harness = Join-Path $RepoDir ('system/harness/' + $Entry.Key + '.md')
-    if (Test-Path -LiteralPath $harness -PathType Leaf) { $parts += $harness }
+    if (Test-PromptContent $harness) { $parts += $harness }
     # 没有定制内容时产物无意义：目标应当直接链接通用文件，遗留产物一并清掉
     if ($parts.Count -eq 0) {
         if (Test-Path -LiteralPath $out -PathType Leaf) {
