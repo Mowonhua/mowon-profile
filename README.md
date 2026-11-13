@@ -81,6 +81,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 | ZCode | `~/.zcode/AGENTS.md` |
 | Pi | `~/.pi/agent/AGENTS.md` |
 | DeepSeek Harness | `~/.dsh/AGENTS.md` |
+| Antigravity | `~/.gemini/AGENTS.md` |
 | Qoder CN | `~/.qoder-cn/AGENTS.md` |
 | Trae CN | `~/.trae-cn/user_rules.md` |
 

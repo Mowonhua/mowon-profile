@@ -13,6 +13,7 @@ claude|.claude/CLAUDE.md|codegraph
 zcode|.zcode/AGENTS.md|codegraph
 pi|.pi/agent/AGENTS.md|codegraph
 dsh|.dsh/AGENTS.md|codegraph
+antigravity|.gemini/AGENTS.md
 qoder-cn|.qoder-cn/AGENTS.md
 # Trae CN 的“个人规则”：新版本改读 user_rules/ 目录下的多个 md，但旧版单文件
 # user_rules.md 仍被规则服务读取；用单文件与仓库一一对应，不替换用户自建的规则目录
