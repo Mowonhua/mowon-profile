@@ -23,6 +23,14 @@
 
 新增一个 harness：在清单追加一行；需要定制时再添加 `fragments/` 或 `harness/` 下的文件。`composed/` 是生成物，不要手写或提交。
 
+## 现有片段
+
+| 片段 | 声明给 |
+| --- | --- |
+| `codegraph` | `codex`、`claude`、`pi`、`zcode`、`dsh` |
+
+`codegraph` 的内容只在注册了 CodeGraph MCP 的 harness 里有意义：`qoder-cn` 里该 MCP 存在但被禁用，`trae-cn` 未配置，这两家不声明。在别的 harness 上装 CodeGraph 后，在清单对应行加上该片段名即可。
+
 ## 生效时机
 
 不存在定制的 harness，目标是 `AGENTS.md` 的软链接，改源文件立即生效。

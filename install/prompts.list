@@ -5,11 +5,13 @@
 # 目标直接链接 system/AGENTS.md。组合机制见 system/README.md。
 # 目标路径所在目录由对应工具自己创建，目录不存在时安装脚本跳过该项。
 
-codex|.codex/AGENTS.md
-claude|.claude/CLAUDE.md
-zcode|.zcode/AGENTS.md
-pi|.pi/agent/AGENTS.md
-dsh|.dsh/AGENTS.md
+# codegraph 段只给注册了 CodeGraph MCP 的 harness：codex、claude、pi、zcode、dsh。
+# qoder-cn 里该 MCP 存在但被禁用，trae-cn 未配置，两者不要。
+codex|.codex/AGENTS.md|codegraph
+claude|.claude/CLAUDE.md|codegraph
+zcode|.zcode/AGENTS.md|codegraph
+pi|.pi/agent/AGENTS.md|codegraph
+dsh|.dsh/AGENTS.md|codegraph
 qoder-cn|.qoder-cn/AGENTS.md
 # Trae CN 的“个人规则”：新版本改读 user_rules/ 目录下的多个 md，但旧版单文件
 # user_rules.md 仍被规则服务读取；用单文件与仓库一一对应，不替换用户自建的规则目录
