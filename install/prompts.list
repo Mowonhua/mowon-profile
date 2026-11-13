@@ -1,0 +1,16 @@
+# 全局提示词分发清单。每行一项，字段用 | 分隔：
+#   <harness>|<目标路径，相对 $HOME>|<片段，逗号分隔，可空>
+# harness 名同时是 system/harness/<key>.md 与 system/composed/<key>.md 的文件名。
+# 片段来自 system/fragments/<name>.md，按这里的顺序拼接；没有片段也没有 harness 文件时，
+# 目标直接链接 system/AGENTS.md。组合机制见 system/README.md。
+# 目标路径所在目录由对应工具自己创建，目录不存在时安装脚本跳过该项。
+
+codex|.codex/AGENTS.md
+claude|.claude/CLAUDE.md
+zcode|.zcode/AGENTS.md
+pi|.pi/agent/AGENTS.md
+dsh|.dsh/AGENTS.md
+qoder-cn|.qoder-cn/AGENTS.md
+# Trae CN 的“个人规则”：新版本改读 user_rules/ 目录下的多个 md，但旧版单文件
+# user_rules.md 仍被规则服务读取；用单文件与仓库一一对应，不替换用户自建的规则目录
+trae-cn|.trae-cn/user_rules.md

@@ -1,0 +1,15 @@
+#!/bin/sh
+# post-commit：提交实际改动了全局提示词源文件时重新组合 system/composed/。
+# 组合产物是各 harness 提示词链接的目标；不重新组合，链接着的会是改动前的定制内容。
+# 其他提交直接返回；钩子始终以 0 退出，不影响提交结果。
+repo="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+changed="$(git diff-tree --root --no-commit-id -r -m --first-parent --name-only HEAD 2>/dev/null)" || exit 0
+printf '%s\n' "$changed" |
+  grep -Eq '^(system/AGENTS\.md|system/fragments/[^/]+\.md|system/harness/[^/]+\.md|install/prompts\.list)$' || exit 0
+. "$repo/install/compose-prompts.sh" 2>/dev/null || exit 0
+out="$(compose_prompts "$repo")"
+names="$(printf '%s\n' "$out" | awk '$1 == "changed" || $1 == "removed" { printf "%s%s", sep, $2; sep = " " }')"
+if [ -n "$names" ]; then
+  printf 'global prompts recomposed: %s\n' "$names"
+fi
+exit 0

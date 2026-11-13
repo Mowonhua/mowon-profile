@@ -1,6 +1,8 @@
 ﻿# install.ps1 —— Windows 原生安装脚本，与 install.sh 行为一致：
 # 全局提示词、本仓库 skills 链接到用户级配置目录，按清单通过 skills CLI 安装云端 skills。
 # 幂等：已就绪的项原样跳过，只补齐缺失项、修正指向错误的链接，可重复执行。提示信息为英文。
+# 全局提示词按 system/README.md 的规则组合（通用部分 + 片段 + harness 专属文件），
+# 组合产物在 system/composed/，目标位置指向产物或直接指向通用部分。
 # 全局提示词只写入已存在的工具配置目录；目录缺失视为该工具未安装，跳过且不为它创建目录。
 #
 # 用法：powershell -ExecutionPolicy Bypass -File install.ps1
@@ -23,20 +25,81 @@ $SKILLS_AGENTS = if ($env:SKILLS_AGENTS) { $env:SKILLS_AGENTS } else { 'codex' }
 # 大仓库（如 mattpocock/skills）在 skills CLI 默认克隆超时内拉不完，会导致安装失败
 $env:SKILLS_CLONE_TIMEOUT_MS = if ($env:SKILLS_CLONE_TIMEOUT_MS) { $env:SKILLS_CLONE_TIMEOUT_MS } else { '600000' }
 
-# 全局提示词映射，与 install.sh 的 GLOBAL_PROMPTS 一致。
-# 目标路径所在目录由对应工具自己创建，因此它的存在就代表该工具已安装：
-# 目录不存在时不写入，也不替工具创建配置目录。
-$GlobalPrompts = @(
-    @{ Source = 'system/AGENTS.md'; Dest = '.zcode/AGENTS.md' },
-    @{ Source = 'system/AGENTS.md'; Dest = '.codex/AGENTS.md' },
-    @{ Source = 'system/AGENTS.md'; Dest = '.claude/CLAUDE.md' },
-    @{ Source = 'system/AGENTS.md'; Dest = '.pi/agent/AGENTS.md' },
-    @{ Source = 'system/AGENTS.md'; Dest = '.dsh/AGENTS.md' },
-    @{ Source = 'system/AGENTS.md'; Dest = '.qoder-cn/AGENTS.md' },
-    # Trae CN 的“个人规则”：新版本改读 user_rules/ 目录下的多个 md，但旧版单文件
-    # user_rules.md 仍被规则服务读取；用单文件与仓库一一对应，不替换用户自建的规则目录
-    @{ Source = 'system/AGENTS.md'; Dest = '.trae-cn/user_rules.md' }
-)
+# 全局提示词的分发清单与组合规则与 install.sh 共用：清单是 install/prompts.list，
+# 每行 <harness>|<目标路径，相对 $HOME>|<片段，逗号分隔>。
+function Get-PromptEntries {
+    $list = Join-Path $RepoDir 'install/prompts.list'
+    $entries = @()
+    if (-not (Test-Path -LiteralPath $list -PathType Leaf)) { return $entries }
+    # 清单为无 BOM 的 UTF-8 且含中文注释；PS 5.1 默认按系统 ANSI 读取，需显式 UTF8
+    foreach ($line in (Get-Content -LiteralPath $list -Encoding UTF8)) {
+        $text = $line.Trim()
+        if (-not $text -or $text.StartsWith('#')) { continue }
+        $fields = $text -split '\|', 3
+        $key = $fields[0].Trim()
+        $dest = if ($fields.Count -ge 2) { $fields[1].Trim() } else { '' }
+        if (-not $key -or -not $dest) {
+            Warn "invalid prompt list line: $text"
+            continue
+        }
+        $entries += [pscustomobject]@{
+            Key       = $key
+            Dest      = $dest
+            Fragments = if ($fields.Count -ge 3) { $fields[2].Trim() } else { '' }
+        }
+    }
+    return $entries
+}
+
+# 保证内容以换行结尾，使相邻文件之间只隔一个空行
+function Get-PromptPart([string]$Path) {
+    $text = [IO.File]::ReadAllText($Path)
+    if (-not $text.EndsWith("`n")) { $text += "`n" }
+    return $text
+}
+
+# 组合单个 harness，返回 changed / unchanged / removed / none。
+# 片段文件缺失只告警不中止：一处笔误不该让整个安装失败，其余部分照常组合。
+function Update-PromptArtifact($Entry) {
+    $out = Join-Path $RepoDir ('system/composed/' + $Entry.Key + '.md')
+    $parts = @()
+    foreach ($name in ($Entry.Fragments -split ',')) {
+        $name = $name.Trim()
+        if (-not $name) { continue }
+        $fragment = Join-Path $RepoDir ('system/fragments/' + $name + '.md')
+        if (Test-Path -LiteralPath $fragment -PathType Leaf) {
+            $parts += $fragment
+        } else {
+            Warn "fragment not found: system/fragments/$name.md (referenced by $($Entry.Key))"
+        }
+    }
+    $harness = Join-Path $RepoDir ('system/harness/' + $Entry.Key + '.md')
+    if (Test-Path -LiteralPath $harness -PathType Leaf) { $parts += $harness }
+    # 没有定制内容时产物无意义：目标应当直接链接通用文件，遗留产物一并清掉
+    if ($parts.Count -eq 0) {
+        if (Test-Path -LiteralPath $out -PathType Leaf) {
+            Remove-Item -LiteralPath $out -Force
+            return 'removed'
+        }
+        return 'none'
+    }
+    $common = Join-Path $RepoDir 'system/AGENTS.md'
+    $text = (Get-PromptPart $common) + (($parts | ForEach-Object { "`n" + (Get-PromptPart $_) }) -join '')
+    # 临时文件放在 system/ 下：与产物同卷，重命名是原子的
+    $tmp = Join-Path $RepoDir "system/.compose-$($Entry.Key).tmp$PID"
+    # 组合产物必须是无 BOM 的 UTF-8：PS 5.1 的 Set-Content -Encoding UTF8 会写 BOM
+    [IO.File]::WriteAllText($tmp, $text, (New-Object -TypeName Text.UTF8Encoding -ArgumentList $false))
+    $same = (Test-Path -LiteralPath $out -PathType Leaf) -and
+        (Get-FileHash -LiteralPath $tmp -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $out -Algorithm SHA256).Hash
+    if ($same) {
+        Remove-Item -LiteralPath $tmp -Force
+        return 'unchanged'
+    }
+    $dir = [IO.Path]::GetDirectoryName($out)
+    if (-not [IO.Directory]::Exists($dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    Move-Item -LiteralPath $tmp -Destination $out -Force
+    return 'changed'
+}
 
 $script:Failed = $false
 
@@ -291,8 +354,36 @@ function Install-Entry([string]$Source, [string]$Target, [string]$Name, [switch]
 
 function Install-GlobalPrompts {
     Section 'Global prompts'
-    foreach ($entry in $GlobalPrompts) {
-        $src = Join-Path $RepoDir $entry.Source
+    $common = Join-Path $RepoDir 'system/AGENTS.md'
+    $list = Join-Path $RepoDir 'install/prompts.list'
+    if (-not (Test-Path -LiteralPath $common -PathType Leaf) -or -not (Test-Path -LiteralPath $list -PathType Leaf)) {
+        Warn 'cannot compose global prompts (missing system/AGENTS.md or install/prompts.list)'
+        return
+    }
+    $entries = @(Get-PromptEntries)
+    if ($entries.Count -eq 0) { Warn 'prompt list has no entries'; return }
+    # 先组合：链接目标可能是一份产物，产物比源文件旧就等于装上了旧提示词
+    foreach ($entry in $entries) {
+        $status = Update-PromptArtifact $entry
+        if ($status -eq 'changed') { Redo "system/composed/$($entry.Key).md recomposed" }
+        elseif ($status -eq 'removed') { Write-Removed "system/composed/$($entry.Key).md removed (no harness-specific content)" }
+    }
+    # 清单外的产物不会再被链接，一并清掉
+    $composedDir = Join-Path $RepoDir 'system/composed'
+    if ([IO.Directory]::Exists($composedDir)) {
+        $keys = @{}
+        foreach ($entry in $entries) { $keys[$entry.Key] = $true }
+        foreach ($file in (Get-ChildItem -LiteralPath $composedDir -Filter '*.md' -File)) {
+            $name = [IO.Path]::GetFileNameWithoutExtension($file.Name)
+            if ($keys.ContainsKey($name)) { continue }
+            Remove-Item -LiteralPath $file.FullName -Force
+            Write-Removed "system/composed/$name.md removed (no longer listed)"
+        }
+    }
+    foreach ($entry in $entries) {
+        $src = $common
+        $composed = Join-Path $RepoDir ('system/composed/' + $entry.Key + '.md')
+        if (Test-Path -LiteralPath $composed -PathType Leaf) { $src = $composed }
         $dest = Join-Path $HOME $entry.Dest
         if (-not (Test-Path -LiteralPath $src)) {
             Warn "source file not found: $src"
@@ -306,6 +397,33 @@ function Install-GlobalPrompts {
             continue
         }
         Install-Entry -Source $src -Target $dest -Name $dest -BackupOnDifferent
+    }
+}
+
+# 仓库的 post-commit 钩子只在提交改动了全局提示词源文件时重新组合产物。
+# 已有其他 hooksPath 时不覆盖：那可能属于用户自己的钩子体系。
+function Install-GitHook {
+    Section 'Git hooks'
+    $want = 'install/hooks'
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { Skip 'git not found; hook not installed'; return }
+    & git -C $RepoDir rev-parse --git-dir 1>$null 2>$null
+    if ($LASTEXITCODE -ne 0) { Skip 'not a git repository; hook not installed'; return }
+    if (-not (Test-Path -LiteralPath (Join-Path $RepoDir 'install/hooks/post-commit') -PathType Leaf)) {
+        Warn 'hook script not found: install/hooks/post-commit'
+        return
+    }
+    $current = (& git -C $RepoDir config --local core.hooksPath 2>$null | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0) { $current = '' }
+    if ($current -eq $want) { Keep "core.hooksPath already $want"; return }
+    if ($current) {
+        Warn "core.hooksPath already '$current'; kept as is -- point it at $want to recompose prompts on commit"
+        return
+    }
+    & git -C $RepoDir config --local core.hooksPath $want
+    if ($LASTEXITCODE -eq 0) {
+        Ok "core.hooksPath set to $want"
+    } else {
+        Warn 'could not set core.hooksPath; prompt recomposition on commit is not hooked up'
     }
 }
 
@@ -480,6 +598,7 @@ function Remove-UnlistedSkills {
 
 # 仅在当前进程无法创建符号链接时请求提权；取消或无法启动时保留原有降级路径。
 # 提权进程在新窗口中运行，等待其结束并返回相同的退出码，避免父进程重复安装。
+# [test-cut] 测试切片标记：install/test_*.py 只载入本行之前的部分（函数定义）后自行调用。
 $script:CanSymlink = Test-SymlinkCapable
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $isAdministrator = (New-Object Security.Principal.WindowsPrincipal($identity)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -499,6 +618,7 @@ $script:CanJunction = if ($script:CanSymlink) { $false } else { Test-JunctionCap
 
 Write-Header
 Install-GlobalPrompts
+Install-GitHook
 Install-LocalSkills
 Install-CloudSkills
 Remove-UnlistedSkills

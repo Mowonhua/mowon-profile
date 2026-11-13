@@ -6,8 +6,8 @@
 
 - `install.sh` — 一键安装脚本（macOS / Linux / Git Bash）：将全局提示词与本地 skills 软链接到用户级配置目录，按清单通过 skills CLI 安装云端 skills；幂等。
 - `install.ps1` — Windows 原生安装脚本，行为与 `install.sh` 一致（PowerShell 5.1+；无符号链接权限时目录降级 junction、文件降级复制）。
-- `install/` — 安装配置，目前含云端 skills 清单 `skills-cloud.list`。
-- `system/` — 各 harness 全局指令的源文件，安装到各主机、各 harness 的全局配置位置。
+- `install/` — 安装配置与实现：云端 skills 清单 `skills-cloud.list`、全局提示词分发清单 `prompts.list`、提示词组合库 `compose-prompts.sh`、提交钩子 `hooks/post-commit`。
+- `system/` — 各 harness 全局指令的源文件：`AGENTS.md` 为通用部分，`fragments/` 为可复用片段，`harness/` 为单个 harness 的定制，`composed/` 为组合产物（生成物，不入库）。分发与组合规则见 [system/README.md](system/README.md)。
 - `bots/<role>/INSTRUCTIONS.md` — Bot 角色指令。约定见 [bots/README.md](bots/README.md)。
 - `dsh/presets/<preset-name>/` — DeepSeek Harness 的 agent 预设 bundle，内含 `cordis.patch.yml`（预设声明与插件清单）、`lib/`（预设自带的 Cordis 插件）与 `README.md`；用 `dsh plugin` 或 Harness 的插件管理安装，不由安装脚本处理。
 - `skills/<skill-name>/` — 每个 skill 一个目录，目录名与 `SKILL.md` frontmatter 的 `name` 一致（kebab-case）。
@@ -21,5 +21,6 @@
 
 - 内容一律使用简体中文撰写，技术标识保留英文；`description` 可使用英文以提升跨模型触发稳定性。
 - 新增或修改 skill 时，参照既有 skill 的目录结构保持一致；不引入仓库内其他 skill 之外的依赖。
-- 新增skill时，向用户询问是否需要配置skill模型不可见，并依据答复配置openai.yaml的policy。
-- 本仓库无构建与测试，验证方式为检查目录名与 `name` 一致、frontmatter 完整。
+- 新增 skill 时，向用户询问是否需要配置skill模型不可见，并依据答复配置openai.yaml的policy。
+- 新增或移除 harness 时，同步改 `install/prompts.list`；定制内容放 `system/fragments/`（多 harness 复用）或 `system/harness/`（单 harness），不复制通用部分，也不手写 `system/composed/`。
+- 本仓库的验证方式是 `python -m unittest install.test_global_prompts install.test_local_skills`（Windows 无符号链接权限时部分用例自动跳过），以及检查目录名与 `name` 一致、frontmatter 完整。

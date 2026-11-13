@@ -4,6 +4,11 @@
 # CodeGraph 本机索引缓存，按主机生成
 .codegraph/
 
+# 全局提示词的组合产物，由安装脚本与 post-commit 钩子生成
+system/composed/
+# 组合过程中的临时文件；正常结束会被重命名或删除，只在组合被中断时残留
+system/.compose-*.tmp*
+
 # 编辑器与操作系统文件
 .vscode/
 .zcode/

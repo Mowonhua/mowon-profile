@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # 一键安装本仓库的 AI 配置：全局提示词、本仓库 skills、云端 skills 清单。
 # 幂等：已就绪的项原样跳过，只补齐缺失项、修正指向错误的链接，可重复执行。
+# 全局提示词按 system/README.md 的规则组合（通用部分 + 片段 + harness 专属文件），
+# 组合产物在 system/composed/，目标位置指向产物或直接指向通用部分。
 # 全局提示词只写入已存在的工具配置目录；目录缺失视为该工具未安装，跳过且不为它创建目录。
 #
 # 用法：克隆本仓库后执行 ./install.sh（macOS / Linux 原生支持，Windows 在 Git Bash / MSYS2
@@ -40,21 +42,6 @@ CLOUD_LIST="$REPO_DIR/install/skills-cloud.list"
 SKILLS_AGENTS="${SKILLS_AGENTS:-codex}"
 # 大仓库（如 mattpocock/skills）在 skills CLI 默认克隆超时内拉不完，会导致安装失败
 export SKILLS_CLONE_TIMEOUT_MS="${SKILLS_CLONE_TIMEOUT_MS:-600000}"
-
-# 全局提示词映射，每项为 仓库内源文件|目标路径（相对 $HOME）。
-# 目标路径所在目录由对应工具自己创建，因此它的存在就代表该工具已安装：
-# 目录不存在时不写入，也不替工具创建配置目录。
-GLOBAL_PROMPTS=(
-  "system/AGENTS.md|.zcode/AGENTS.md"
-  "system/AGENTS.md|.codex/AGENTS.md"
-  "system/AGENTS.md|.claude/CLAUDE.md"
-  "system/AGENTS.md|.pi/agent/AGENTS.md"
-  "system/AGENTS.md|.dsh/AGENTS.md"
-  "system/AGENTS.md|.qoder-cn/AGENTS.md"
-  # Trae CN 的“个人规则”：新版本改读 user_rules/ 目录下的多个 md，但旧版单文件
-  # user_rules.md 仍被规则服务读取；用单文件与仓库一一对应，不替换用户自建的规则目录
-  "system/AGENTS.md|.trae-cn/user_rules.md"
-)
 
 FAILED=0
 
@@ -157,10 +144,39 @@ make_link() {
 
 install_prompts() {
   section "Global prompts"
-  local entry src dest backup parent
-  for entry in "${GLOBAL_PROMPTS[@]}"; do
-    src="$REPO_DIR/${entry%%|*}"
-    dest="$HOME/${entry#*|}"
+  local prompts_lib status_file entries status key dest frags src composed parent backup
+  # 组合逻辑与清单解析在 install/compose-prompts.sh，同一个文件也被仓库的 post-commit
+  # 钩子引用，两处行为一致；运行到本项时按当时的 REPO_DIR 读取，不缓存路径
+  prompts_lib="$REPO_DIR/install/compose-prompts.sh"
+  if [ ! -f "$prompts_lib" ]; then
+    warn "missing prompt lib: $prompts_lib"
+    return
+  fi
+  . "$prompts_lib"
+  compose_warn() { warn "$*"; }
+  # 先组合：链接目标可能是一份产物，产物比源文件旧就等于装上了旧提示词。
+  # 状态行写临时文件而不是命令替换，否则组合与告警都落在子 shell 里，
+  # 失败计数传不回主进程，安装会以成功收尾。
+  status_file="$(mktemp)" || { warn 'cannot create temporary file'; return; }
+  if ! compose_prompts "$REPO_DIR" >"$status_file"; then
+    rm -f "$status_file"
+    warn "cannot compose global prompts (missing system/AGENTS.md or install/prompts.list)"
+    return
+  fi
+  while IFS=' ' read -r status key; do
+    case "$status" in
+      changed) redo "system/composed/$key.md recomposed" ;;
+      removed) del "system/composed/$key.md removed (no harness-specific content)" ;;
+    esac
+  done <"$status_file"
+  rm -f "$status_file"
+  entries="$(prompts_list_entries "$REPO_DIR")" || return
+  while IFS='|' read -r key dest frags; do
+    [ -n "$key" ] || continue
+    src="$REPO_DIR/system/AGENTS.md"
+    composed="$REPO_DIR/system/composed/$key.md"
+    [ -f "$composed" ] && src="$composed"
+    dest="$HOME/$dest"
     if [ ! -e "$src" ]; then
       warn "source file not found: $src"
       continue
@@ -196,7 +212,45 @@ install_prompts() {
       continue
     fi
     make_link "$src" "$dest" && ok "$dest"
-  done
+  done <<<"$entries"
+}
+
+# 仓库的 post-commit 钩子只在提交改动了全局提示词源文件时重新组合产物。
+# 已有其他 hooksPath 时不覆盖：那可能属于用户自己的钩子体系。
+install_git_hooks() {
+  section "Git hooks"
+  local want='install/hooks' repo_git current
+  if ! command -v git >/dev/null 2>&1; then
+    skip "git not found; hook not installed"
+    return
+  fi
+  # git 是原生程序，不认 POSIX 路径：Windows 上必须先转成盘符路径再传给 -C
+  repo_git="$REPO_DIR"
+  if [ "$OS" = windows ] && command -v cygpath >/dev/null 2>&1; then
+    repo_git="$(cygpath -w "$REPO_DIR")"
+  fi
+  if ! git -C "$repo_git" rev-parse --git-dir >/dev/null 2>&1; then
+    skip "not a git repository; hook not installed"
+    return
+  fi
+  if [ ! -f "$REPO_DIR/install/hooks/post-commit" ]; then
+    warn "hook script not found: install/hooks/post-commit"
+    return
+  fi
+  current="$(git -C "$repo_git" config --local core.hooksPath 2>/dev/null || true)"
+  if [ "$current" = "$want" ]; then
+    keep "core.hooksPath already $want"
+    return
+  fi
+  if [ -n "$current" ]; then
+    warn "core.hooksPath already '$current'; kept as is -- point it at $want to recompose prompts on commit"
+    return
+  fi
+  if git -C "$repo_git" config --local core.hooksPath "$want"; then
+    ok "core.hooksPath set to $want"
+  else
+    warn "could not set core.hooksPath; prompt recomposition on commit is not hooked up"
+  fi
 }
 
 # 只清理本安装器创建的同名一级技能链接。父目录必须仍可解析，避免把
@@ -401,6 +455,7 @@ cleanup_unlisted_skills() {
   done
 }
 
+# [test-cut] 测试切片标记：install/test_*.py 只载入本行之前的部分（函数定义）后自行调用。
 CAN_SYMLINK=0; can_symlink && CAN_SYMLINK=1
 
 # Windows 下重新启动当前 Bash，保留其环境和安装路径；提权失败时继续使用原有降级方式。
@@ -428,6 +483,7 @@ main() {
     printf '  %sSymlink%s     %sunavailable (junction for directories, copy for files)%s\n' "$DIM" "$R" "$YLW" "$R"
   fi
   install_prompts
+  install_git_hooks
   install_local_skills
   install_cloud_skills
   cleanup_unlisted_skills

@@ -7,7 +7,7 @@
 [快速安装](#快速安装) · [仓库内容](#仓库内容) · [安装行为](#安装行为) · [MIT 许可证](LICENSE)
 
 ```text
-system/AGENTS.md           →  Codex · Claude Code · ZCode · Pi · DSH · Qoder CN · Trae CN
+system/                   →  Codex · Claude Code · ZCode · Pi · DSH · Qoder CN · Trae CN
 skills/<name>/            →  ~/.agents/skills/
 install/skills-cloud.list →  按清单安装云端 skills
 ```
@@ -55,7 +55,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 
 | 内容 | 入口 |
 | --- | --- |
-| 全局指令 | [system/AGENTS.md](system/AGENTS.md) |
+| 全局指令 | [system/](system/README.md) |
 | Bot 角色指令 | [bots/](bots/) |
 | 本地 skills | [skills/](skills/) |
 | 云端 skills：按清单从上游安装 | [install/skills-cloud.list](install/skills-cloud.list) |
@@ -67,10 +67,12 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 
 全局指令和本地 skills 通过链接引用仓库源文件。修改仓库文件即可更新链接目标；Windows 文件复制降级的情况除外。
 
+全局指令按 harness 拆分：`system/AGENTS.md` 是通用部分，`system/fragments/` 与 `system/harness/` 是可选定制，组合后写入 `system/composed/<key>.md` 并链接到目标位置。没有定制的 harness 直接链接 `system/AGENTS.md`，改完立即生效；有定制的 harness 链接到组合产物，需重新组合才反映源文件改动。安装脚本在运行时会组合，另外它把仓库的 `core.hooksPath` 指向 `install/hooks`，`post-commit` 只在提交确实改动了提示词源文件时重新组合。细节见 [system/README.md](system/README.md)。
+
 <details>
 <summary>全局指令的目标位置</summary>
 
-`system/AGENTS.md` 分发到以下位置：
+`system/` 组合出的全局指令分发到以下位置：
 
 | 工具 | 用户配置文件 |
 | --- | --- |

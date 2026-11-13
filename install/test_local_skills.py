@@ -48,7 +48,7 @@ class LocalSkillsTests(unittest.TestCase):
         env = dict(os.environ, AGENTS_HOME=str(self.agents), TEST_REPO=str(self.repo))
         if powershell:
             source = (ROOT / "install.ps1").read_text(encoding="utf-8-sig")
-            source = source.split('Info "OS: windows', 1)[0]
+            source = source.split("# [test-cut]", 1)[0]
             source += '''
 $RepoDir = $env:TEST_REPO
 $script:CanSymlink = $true
@@ -61,7 +61,7 @@ if ($script:Failed) { exit 1 }
             command = [shell, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script)]
         else:
             source = (ROOT / "install.sh").read_text(encoding="utf-8")
-            source = source.split("CAN_SYMLINK=0; can_symlink", 1)[0]
+            source = source.split("# [test-cut]", 1)[0]
             source += '''
 REPO_DIR="$TEST_REPO"
 if command -v cygpath >/dev/null 2>&1; then

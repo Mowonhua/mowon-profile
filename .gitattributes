@@ -3,3 +3,5 @@
 # 本脚本与清单必须保持 LF，避免 Windows 检出为 CRLF 后无法解析
 *.sh text eol=lf
 *.list text eol=lf
+# 钩子由 Git 自带的 sh 运行，CRLF 会让 shebang 失效
+install/hooks/* text eol=lf
