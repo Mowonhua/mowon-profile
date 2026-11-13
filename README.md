@@ -55,10 +55,11 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 
 | 内容 | 入口 |
 | --- | --- |
-| 全局指令：沟通、执行、注释与验证约定 | [system/AGENTS.md](system/AGENTS.md) |
-| 本地 skills：项目初始化、功能建模、设计与评审 | [skills/](skills/) |
+| 全局指令 | [system/AGENTS.md](system/AGENTS.md) |
+| Bot 角色指令 | [bots/](bots/) |
+| 本地 skills | [skills/](skills/) |
 | 云端 skills：按清单从上游安装 | [install/skills-cloud.list](install/skills-cloud.list) |
-| DeepSeek Harness 标准模式中文预设 | [standard-zh](dsh/presets/standard-zh/README.md) |
+| DeepSeek Harness 预设 | [dsh/presets/](dsh/presets/) |
 
 `skills/deprecated/` 保存归档 skill，不参与安装。`.scratch/` 是本地草稿区，不入库。
 
