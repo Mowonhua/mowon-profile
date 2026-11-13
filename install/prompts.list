@@ -7,7 +7,8 @@
 
 # codegraph 段只给注册了 CodeGraph MCP 的 harness：codex、claude、pi、zcode、dsh。
 # qoder-cn 里该 MCP 存在但被禁用，trae-cn 未配置，两者不要。
-codex|.codex/AGENTS.md|codegraph
+# 片段按行内的顺序拼接，codex 上行保持原全文里的先后关系：反防御性写作在前，CodeGraph 在后。
+codex|.codex/AGENTS.md|anti-defensive-writing,codegraph
 claude|.claude/CLAUDE.md|codegraph
 zcode|.zcode/AGENTS.md|codegraph
 pi|.pi/agent/AGENTS.md|codegraph

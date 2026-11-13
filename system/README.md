@@ -28,8 +28,11 @@
 | 片段 | 声明给 |
 | --- | --- |
 | `codegraph` | `codex`、`claude`、`pi`、`zcode`、`dsh` |
+| `anti-defensive-writing` | `codex` |
 
 `codegraph` 的内容只在注册了 CodeGraph MCP 的 harness 里有意义：`qoder-cn` 里该 MCP 存在但被禁用，`trae-cn` 未配置，这两家不声明。在别的 harness 上装 CodeGraph 后，在清单对应行加上该片段名即可。
+
+`anti-defensive-writing` 只对 `codex` 生效，其余 harness 只拿到通用部分。
 
 ## 生效时机
 
