@@ -29,6 +29,7 @@
 | --- | --- |
 | `codegraph` | `codex`、`claude`、`pi`、`zcode`、`dsh` |
 | `anti-defensive-writing` | `codex` |
+| `progress-reporting` | `pi`、`antigravity` |
 
 `codegraph` 的内容只在注册了 CodeGraph MCP 的 harness 里有意义：`qoder-cn` 里该 MCP 存在但被禁用，`trae-cn` 未配置，这两家不声明。在别的 harness 上装 CodeGraph 后，在清单对应行加上该片段名即可。
 
